@@ -34,6 +34,28 @@ Different kind of services needed for the framework.
 - Templater: Reads files, renders templates and provides interfaces.
 - DataBasePooler: Serves as a database connection and connection pooler.
 
+### /Service/templating/
+Contains all templating-related classes (`Templater`, readers, and rendering interfaces).
+
+#### Templater 
+- Reads templates from `/templates` via `FileTemplateReader`.
+- Renders placeholders with `Map<String, ?>` context values.
+- Supports placeholder syntax:
+```
+{{ key }}
+```
+Notes:
+- Missing keys render as empty strings
+- Prevents `../` path traversal outside the template root
+- Supports both static and instance-based rendering
+
+Example usage:
+```java
+String html = Templater.render("index.html", Map.of(
+    "title", "Hello from Java Autumn"
+));
+```
+
 ### /templates/
 Contains HTML files with templating structure.
 
