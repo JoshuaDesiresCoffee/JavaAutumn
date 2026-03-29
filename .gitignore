@@ -12,6 +12,7 @@
 
 # Package Files #
 *.jar
+!lib/*.jar
 *.war
 *.nar
 *.ear
@@ -24,5 +25,6 @@ hs_err_pid*
 replay_pid*
 
 out
+target
 .idea
 *.iml
