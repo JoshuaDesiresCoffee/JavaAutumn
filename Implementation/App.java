@@ -16,6 +16,7 @@ public class App {
         router.GET("/static/", StaticAssetHandler::serve);
 
         router.GET("/api/user", UserAPIHandler::get);
+        router.GET("/api/user/all", UserAPIHandler::list);
         router.GET("/api/user_create", UserAPIHandler::create);
         router.GET("/api/user_update", UserAPIHandler::update);
         router.GET("/api/user_delete", UserAPIHandler::delete);

@@ -12,7 +12,19 @@ public class UserAPIHandler {
     public static void get(Exchange exchange) throws IOException {
 
         try {
-            var u = Db.instance.SELECT.FROM(Implementation.repository.User.class).LIMIT(1).EXEC();
+            var u = Db.instance.SELECT.FROM(User.class).LIMIT(1).EXEC();
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.send(201, Json.toJson(u));
+        } catch (Exception e) {
+            e.printStackTrace();
+            exchange.send(500, e.getMessage());
+        }
+    }
+
+    public static void list(Exchange exchange) throws IOException {
+
+        try {
+            var u = Db.instance.SELECT.FROM(User.class).EXEC();
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.send(201, Json.toJson(u));
         } catch (Exception e) {
@@ -24,8 +36,10 @@ public class UserAPIHandler {
     public static void create(Exchange exchange) throws IOException {
 
         try {
+            var oldUserList = Db.instance.SELECT.FROM(User.class).EXEC();
+
             User u = new User();
-            u.id = 1;
+            u.id = oldUserList.size() + 1;
             u.email = "example@mail.com";
             u.name = "Example";
 
