@@ -1,6 +1,6 @@
 param(
     [switch]$SkipBuild,
-    [string]$JarPath = "lib/sqlite-jdbc-3.51.3.0.jar"
+    [string]$JarPath = "Autumn.lib/sqlite-jdbc-3.51.3.0.jar"
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,8 +17,8 @@ if (-not (Test-Path $JarPath)) {
 }
 
 $classpath = "out;$JarPath"
-Write-Host "Running tests.TestRunner with assertions enabled (-ea) ..."
-& java -ea -cp $classpath tests.TestRunner
+Write-Host "Running Implementation.tests.TestRunner with assertions enabled (-ea) ..."
+& java -ea -cp $classpath Implementation.tests.TestRunner
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

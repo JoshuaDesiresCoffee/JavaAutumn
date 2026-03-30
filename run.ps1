@@ -1,7 +1,7 @@
 param(
     [switch]$SkipBuild,
-    [string]$MainClass = "App",
-    [string]$JarPath = "lib/sqlite-jdbc-3.51.3.0.jar",
+    [string]$MainClass = "Implementation.App",
+    [string]$JarPath = "Autumn.lib/sqlite-jdbc-3.51.3.0.jar",
     [string]$JavaRelease = "25"
 )
 

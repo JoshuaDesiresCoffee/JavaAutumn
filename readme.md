@@ -17,11 +17,11 @@ Features:
 
 ## Structure
 
-### /Handler/
-Handler contains all classes which feature the necessary lambdas for routing registration.
+### /Implementation.handler/
+Implementation.handler contains all classes which feature the necessary lambdas for routing registration.
 In order to be eligable as a handler for routing, it has to follow the following footprint:
 ```
-public static void MyHandlerName(HttpExchange exchange)
+Implementation.templates.public static void MyHandlerName(HttpExchange exchange)
 ```
 Returns will be ignored and only static functions allowed.
 
@@ -30,17 +30,17 @@ Returns will be ignored and only static functions allowed.
 Contains all classes modeling to- and querying the database.
 `GenericTableRepository` introspects table metadata and can perform CRUD on user-defined tables.
 
-### /Service/
+### /Autumn.Implementation.handler.Service/
 Different kind of services needed for the framework.
 - Router: Handles registration and execution of routing within the web framework.
-- Templater: Reads files and renders templates.
+- Templater: Reads files and renders Implementation.templates.
 - Database: JDBC connection provider.
 
-### /Service/templating/
+### /Autumn.Implementation.handler.Service/templating/
 Contains the template engine (`Templater`).
 
 #### Templater 
-- Reads templates from `/templates`.
+- Reads Implementation.templates from `/Implementation.templates`.
 - Renders placeholders with `Map<String, ?>` context values.
 - Supports placeholder syntax:
 ```
@@ -57,10 +57,10 @@ String html = Templater.render("index.html", Map.of(
 ));
 ```
 
-### /templates/
+### /Implementation.templates/
 Contains HTML files with templating structure.
 
-### App.java
+### Implementation.App.java
 Entrypoint of the application. Reads configuration files, creates initial objects and registers routes, as well as starts the webserver.
 
 ---
@@ -86,7 +86,7 @@ Entrypoint of the application. Reads configuration files, creates initial object
 
 Prerequisites:
 - Java 25 installed (`java -version`, `javac -version`)
-- SQLite JDBC jar at `lib/sqlite-jdbc-3.51.3.0.jar`
+- SQLite JDBC jar at `Autumn.lib/sqlite-jdbc-3.51.3.0.jar`
 
 Build:
 ```powershell
@@ -110,7 +110,7 @@ Optional: clean build output first:
 
 ### Tests (no extra libraries)
 
-Uses Java’s built-in `assert` only; the JVM must enable assertions (`-ea`). Test sources live under `/tests/` and compile with the app.
+Uses Java’s built-in `assert` only; the JVM must enable assertions (`-ea`). Test sources live under `/Implementation.tests/` and compile with the app.
 
 ```powershell
 .\test.ps1
@@ -125,5 +125,5 @@ Skip rebuild:
 Equivalent manual command after `.\build.ps1`:
 
 ```powershell
-java -ea -cp "out;lib/sqlite-jdbc-3.51.3.0.jar" tests.TestRunner
+java -ea -cp "out;Autumn.lib/sqlite-jdbc-3.51.3.0.jar" Implementation.tests.TestRunner
 ```
