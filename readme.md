@@ -20,3 +20,14 @@ Clean separation between routing and logic
 Minimal boilerplate
 
 ## Simple Handler Model
+Handlers are static Java methods with direct access to the request and response.
+
+public class IndexHandler {
+    public static void get(Exchange exchange) throws IOException {
+        String html = Templater.render("index.html", null);
+        exchange.sendHTML(200, html);
+    }
+}
+No framework magic
+Easy to understand and debug
+Full control over HTTP handling
