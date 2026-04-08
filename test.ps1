@@ -1,6 +1,6 @@
 param(
     [switch]$SkipBuild,
-    [string]$JarPath = "Autumn.lib/sqlite-jdbc-3.51.3.0.jar"
+    [string]$JarPath = "Autumn/lib/sqlite-jdbc-3.51.3.0.jar"
 )
 
 $ErrorActionPreference = "Stop"

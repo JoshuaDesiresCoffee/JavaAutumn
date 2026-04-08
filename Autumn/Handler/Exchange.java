@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpExchange;
 
 import java.io.*;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 public class Exchange {
     private final HttpExchange raw;
@@ -22,7 +23,7 @@ public class Exchange {
     public OutputStream getResponseBody()         { return raw.getResponseBody(); }
 
     public void send(int status, String body) throws IOException {
-        byte[] bytes = body.getBytes();
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
         raw.sendResponseHeaders(status, bytes.length);
         try (OutputStream os = raw.getResponseBody()) { os.write(bytes); }
     }

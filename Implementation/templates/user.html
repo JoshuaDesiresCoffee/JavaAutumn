@@ -2,12 +2,63 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{{ title }}</title>
+        <title>Users</title>
         <link rel="stylesheet" href="/static/style.css">
     </head>
     <body>
-        <h1>{{ name }}</h1>
-        <p>{{ email }}</p>
-        <div><b>User has ID: </b>{{ id }}</div>
+        <h1>Users</h1>
+
+        <div class="buttons">
+            <a class="table-link" href="/">Home</a>
+            <a class="table-link active" href="/users">Users</a>
+            <a class="table-link" href="/api/user/all">Users API</a>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each users}}
+                        <tr>
+                            <td>{{ id }}</td>
+                            <td>{{ name }}</td>
+                            <td>{{ email }}</td>
+                            <td>
+                                <div class="row-form">
+                                    <form class="inline-form" method="get" action="/api/user_update">
+                                        <input type="hidden" name="id" value="{{ id }}">
+                                        <input name="name" value="{{ name }}" placeholder="Name">
+                                        <input name="email" value="{{ email }}" placeholder="Email">
+                                        <button type="submit">Update</button>
+                                    </form>
+                                    <form class="delete-form" method="get" action="/api/user_delete">
+                                        <input type="hidden" name="id" value="{{ id }}">
+                                        <button type="submit">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="create-panel">
+            <h2>Create User</h2>
+            <form class="inline-form" method="get" action="/api/user_create">
+                <label>Name</label>
+                <input name="name" placeholder="Alice">
+                <label>Email</label>
+                <input name="email" placeholder="alice@example.com">
+                <button type="submit">Create</button>
+            </form>
+        </div>
     </body>
 </html>

@@ -37,10 +37,16 @@ public class Router {
 
                 if (matchedHandler == null) {
                     exchange.sendResponseHeaders(405, -1);
+                    exchange.close();
                     return;
                 }
 
-                matchedHandler.handle(exchange);
+                try {
+                    matchedHandler.handle(exchange);
+                } catch (Exception ex) {
+                    exchange.sendResponseHeaders(500, -1);
+                    exchange.close();
+                }
             });
             return new ConcurrentHashMap<>();
         });

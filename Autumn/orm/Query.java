@@ -39,8 +39,9 @@ public class Query<T> {
             try {
                 Object val = f.get(o);
                 if (val != null) {
-                    if (sb.length() > 0) sb.append(" AND ");
-                    sb.append(f.getName()).append(" = '").append(val).append("'");
+                    if (!sb.isEmpty()) sb.append(" AND ");
+                    sb.append(f.getName()).append(" = '")
+                      .append(val.toString().replace("'", "''")).append("'");
                 }
             } catch (IllegalAccessException ignored) {}
         }
@@ -93,44 +94,49 @@ public class Query<T> {
     private void execInsert() {
         Field[] fields = object.getClass().getDeclaredFields();
         StringJoiner cols = new StringJoiner(", ");
-        StringJoiner vals = new StringJoiner(", ");
+        StringJoiner placeholders = new StringJoiner(", ");
+        List<Object> params = new ArrayList<>();
         for (Field f : fields) {
             f.setAccessible(true);
             try {
                 cols.add(f.getName());
-                Object v = f.get(object);
-                vals.add(v == null ? "NULL" : "'" + v + "'");
+                placeholders.add("?");
+                params.add(f.get(object));
             } catch (IllegalAccessException ignored) {}
         }
-        String sql = "INSERT INTO " + tableName(object.getClass()) + " (" + cols + ") VALUES (" + vals + ")";
-        exec(sql);
+        String sql = "INSERT INTO " + tableName(object.getClass()) + " (" + cols + ") VALUES (" + placeholders + ")";
+        execPrepared(sql, params);
     }
 
     private void execUpdate() {
         Field[] fields = object.getClass().getDeclaredFields();
         StringJoiner sets = new StringJoiner(", ");
+        List<Object> params = new ArrayList<>();
         for (Field f : fields) {
             f.setAccessible(true);
             try {
-                Object v = f.get(object);
-                sets.add(f.getName() + " = " + (v == null ? "NULL" : "'" + v + "'"));
+                sets.add(f.getName() + " = ?");
+                params.add(f.get(object));
             } catch (IllegalAccessException ignored) {}
         }
         String sql = "UPDATE " + tableName(object.getClass()) + " SET " + sets
                 + (where != null ? " WHERE " + where : "");
-        exec(sql);
+        execPrepared(sql, params);
     }
 
     private void execDelete() {
         String sql = "DELETE FROM " + tableName()
                 + (where != null ? " WHERE " + where : "");
-        exec(sql);
+        execPrepared(sql, Collections.emptyList());
     }
 
-    private void exec(String sql) {
+    private void execPrepared(String sql, List<Object> params) {
         try (Connection conn = db.getConnection();
-             Statement stmt  = conn.createStatement()) {
-            stmt.executeUpdate(sql);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            for (int i = 0; i < params.size(); i++) {
+                stmt.setObject(i + 1, params.get(i));
+            }
+            stmt.executeUpdate();
         } catch (SQLException e) { throw new RuntimeException("Query failed: " + sql, e); }
     }
 

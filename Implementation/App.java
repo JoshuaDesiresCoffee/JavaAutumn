@@ -12,12 +12,11 @@ public class App {
 
         var router = new Router(PORT);
 
-        router.GET("/static/", StaticAssetHandler::serve);
+        router.GET("/static/", StaticAssetHandler.withRoot("/static/", "Implementation/static"));
 
         router.GET("/", IndexHandler::get);
-        router.GET("/show", IndexHandler::showUser);
+        router.GET("/users", IndexHandler::listUsers);
 
-        router.GET("/api/user", UserAPIHandler::get);
         router.GET("/api/user/all", UserAPIHandler::list);
         router.GET("/api/user_create", UserAPIHandler::create);
         router.GET("/api/user_update", UserAPIHandler::update);

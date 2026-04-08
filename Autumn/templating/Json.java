@@ -36,6 +36,11 @@ public final class Json {
         if (val instanceof Number)      return val.toString();
         if (val instanceof Boolean)     return val.toString();
         if (val instanceof List<?>)     return toJson(val);
-        return "\"" + val.toString().replace("\"", "\\\"") + "\"";
+        return "\"" + val.toString()
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t") + "\"";
     }
 }

@@ -9,10 +9,11 @@
         <h1>{{ title }}</h1>
         <p>{{ subtitle }}</p>
         <div class="message">{{ message }}</div>
-        <div>{{ table_navigation }}</div>
-        <div>{{ table_panel }}</div>
-        <div class="create-panel">
-            {{ create_form }}
+
+        <div class="buttons">
+            <a class="table-link active" href="/">Home</a>
+            <a class="table-link" href="/users">Users</a>
+            <a class="table-link" href="/api/user/all">Users API</a>
         </div>
     </body>
 </html>

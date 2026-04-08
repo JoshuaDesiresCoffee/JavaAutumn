@@ -6,75 +6,93 @@ import Autumn.templating.Json;
 import Implementation.repository.User;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 public class UserAPIHandler {
 
-    public static void get(Exchange exchange) throws IOException {
-
-        try {
-            var u = Db.instance.SELECT.FROM(User.class).LIMIT(1).EXEC();
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.send(201, Json.toJson(u));
-        } catch (Exception e) {
-            e.printStackTrace();
-            exchange.send(500, e.getMessage());
-        }
-    }
-
     public static void list(Exchange exchange) throws IOException {
-
         try {
-            var u = Db.instance.SELECT.FROM(User.class).EXEC();
+            var users = Db.instance.SELECT.FROM(User.class).EXEC();
             exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.send(201, Json.toJson(u));
+            exchange.send(200, Json.toJson(users));
         } catch (Exception e) {
-            e.printStackTrace();
             exchange.send(500, e.getMessage());
         }
     }
 
     public static void create(Exchange exchange) throws IOException {
-
         try {
-            var oldUserList = Db.instance.SELECT.FROM(User.class).EXEC();
+            String name = param(exchange, "name", "");
+            String email = param(exchange, "email", "");
+            if (name.isBlank() || email.isBlank()) {
+                exchange.send(400, "name and email are required");
+                return;
+            }
 
             User u = new User();
-            u.id = oldUserList.size() + 1;
-            u.email = "example@mail.com";
-            u.name = "Example";
+            u.name = name;
+            u.email = email;
+            Db.instance.INSERT(u).EXEC();
 
-            var newUser = Db.instance.INSERT(u).EXEC();
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.send(201, Json.toJson(u));
+            exchange.getResponseHeaders().set("Location", "/users");
+            exchange.sendResponseHeaders(302, -1);
         } catch (Exception e) {
-            e.printStackTrace();
             exchange.send(500, e.getMessage());
         }
     }
 
     public static void update(Exchange exchange) throws IOException {
         try {
-            User u = new User();
-            u.id = 1;
-            u.email = "updated@mail.com";
-            u.name = "Updated";
+            String idStr = param(exchange, "id", "");
+            String name = param(exchange, "name", "");
+            String email = param(exchange, "email", "");
+            if (idStr.isBlank() || name.isBlank() || email.isBlank()) {
+                exchange.send(400, "id, name and email are required");
+                return;
+            }
 
+            User u = new User();
+            u.id = Integer.parseInt(idStr);
+            u.name = name;
+            u.email = email;
             Db.instance.UPDATE(u).WHERE("id = " + u.id).EXEC();
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.send(200, Json.toJson(u));
+
+            exchange.getResponseHeaders().set("Location", "/users");
+            exchange.sendResponseHeaders(302, -1);
         } catch (Exception e) {
-            e.printStackTrace();
             exchange.send(500, e.getMessage());
         }
     }
 
     public static void delete(Exchange exchange) throws IOException {
         try {
-            Db.instance.DELETE.FROM(User.class).WHERE("id = 1").EXEC();
-            exchange.send(200);
+            String idStr = param(exchange, "id", "");
+            if (idStr.isBlank()) {
+                exchange.send(400, "id is required");
+                return;
+            }
+
+            Db.instance.DELETE.FROM(User.class).WHERE("id = " + Integer.parseInt(idStr)).EXEC();
+
+            exchange.getResponseHeaders().set("Location", "/users");
+            exchange.sendResponseHeaders(302, -1);
         } catch (Exception e) {
-            e.printStackTrace();
             exchange.send(500, e.getMessage());
         }
+    }
+
+    private static String param(Exchange exchange, String key, String fallback) {
+        String raw = exchange.uri().getRawQuery();
+        if (raw == null || raw.isBlank()) return fallback;
+        for (String pair : raw.split("&")) {
+            int idx = pair.indexOf('=');
+            if (idx < 0) continue;
+            String k = URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8);
+            if (!k.equals(key)) continue;
+            String v = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8).trim();
+            return v.isBlank() ? fallback : v;
+        }
+        return fallback;
     }
 }
