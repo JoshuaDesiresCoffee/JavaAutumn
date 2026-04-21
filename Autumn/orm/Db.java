@@ -84,6 +84,7 @@ public class Db {
             else if (f.getName().endsWith(".class")) {
                 String name = root.toURI().relativize(f.toURI()).getPath()
                         .replace('/', '.').replace(".class", "");
+                if (name.contains("$")) continue;
                 try {
                     Class<?> c = Class.forName(name);
                     if (c.isAnnotationPresent(Table.class)) found.add(c);
@@ -96,6 +97,7 @@ public class Db {
         for (Class<?> t : tables) {
             if (!t.isAnnotationPresent(Table.class))
                 throw new RuntimeException(t.getName() + " must be annotated with @Table");
+            validateTable(t);
 
             StringBuilder sql = new StringBuilder("CREATE TABLE IF NOT EXISTS ")
                     .append(tableName(t)).append(" (");
@@ -117,7 +119,13 @@ public class Db {
     }
 
     public Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(url, user, password);
+        Connection conn = DriverManager.getConnection(url, user, password);
+        if (url.startsWith("jdbc:sqlite:")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("PRAGMA foreign_keys = ON");
+            }
+        }
+        return conn;
     }
 
     static String tableName(Class<?> t) {
@@ -179,7 +187,47 @@ public class Db {
             return sql.toString();
         }
 
-        return sqlType(field.getType());
+        StringBuilder sql = new StringBuilder(sqlType(field.getType()));
+        ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
+        if (foreignKey != null) {
+            sql.append(" REFERENCES ")
+                    .append(tableName(foreignKey.table()))
+                    .append("(")
+                    .append(foreignKeyColumn(foreignKey))
+                    .append(")");
+        }
+        return sql.toString();
+    }
+
+    private static void validateTable(Class<?> tableClass) {
+        long idCount = Arrays.stream(persistentFields(tableClass))
+                .filter(field -> field.isAnnotationPresent(Id.class))
+                .count();
+        if (idCount > 1) {
+            throw new RuntimeException(tableClass.getName() + " can only have one @Id field");
+        }
+
+        for (Field field : persistentFields(tableClass)) {
+            ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
+            if (foreignKey == null) continue;
+            if (field.isAnnotationPresent(Id.class)) {
+                throw new RuntimeException(field.getName() + " cannot be both @Id and @ForeignKey");
+            }
+            if (!foreignKey.table().isAnnotationPresent(Table.class)) {
+                throw new RuntimeException(field.getName() + " references a class without @Table");
+            }
+            foreignKeyColumn(foreignKey);
+        }
+    }
+
+    private static String foreignKeyColumn(ForeignKey foreignKey) {
+        if (!foreignKey.column().isBlank()) {
+            return foreignKey.column();
+        }
+        return idField(foreignKey.table())
+                .map(Field::getName)
+                .orElseThrow(() -> new RuntimeException(
+                        foreignKey.table().getName() + " needs an @Id field for default foreign keys"));
     }
 
     private static String sqlType(Class<?> type) {
