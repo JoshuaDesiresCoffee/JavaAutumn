@@ -9,6 +9,8 @@ import Implementation.repository.User;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -22,23 +24,30 @@ public final class TestRunner {
     }
 
     public static void main(String[] args) throws IOException {
-        Db.init();
-        testTemplaterReplacesPlaceholder();
-        testTemplaterMissingKeyRendersEmpty();
-        testTemplaterNullContextSafe();
-        testTemplaterEachLoopRendersListOfMaps();
-        testTemplaterEachLoopRendersScalarListViaThis();
-        testReadTemplateRejectsPathTraversal();
-        testReadTemplateLoadsExistingFile();
-        testJsonEscapesSpecialChars();
-        testJsonEscapesBackslash();
-        testJsonEscapesControlChars();
-        testExchangeCharsetUtf8();
-        testOrmInsertUsesPreparedStatement();
-        testOrmInsertSetsGeneratedId();
-        testOrmWhereObjectRejectsEmptyFilter();
-        testShowUserEmptyDbDoesNotCrash();
-        System.out.println("All MVP.tests passed.");
+        Path dbFile = Files.createTempFile("javaautumn-test-", ".db");
+        try {
+            Db.configure("jdbc:sqlite:" + dbFile);
+            Db.instance.sync(User.class);
+
+            testTemplaterReplacesPlaceholder();
+            testTemplaterMissingKeyRendersEmpty();
+            testTemplaterNullContextSafe();
+            testTemplaterEachLoopRendersListOfMaps();
+            testTemplaterEachLoopRendersScalarListViaThis();
+            testReadTemplateRejectsPathTraversal();
+            testReadTemplateLoadsExistingFile();
+            testJsonEscapesSpecialChars();
+            testJsonEscapesBackslash();
+            testJsonEscapesControlChars();
+            testExchangeCharsetUtf8();
+            testOrmInsertUsesPreparedStatement();
+            testOrmInsertSetsGeneratedId();
+            testOrmWhereObjectRejectsEmptyFilter();
+            testShowUserEmptyDbDoesNotCrash();
+            System.out.println("All MVP.tests passed.");
+        } finally {
+            Files.deleteIfExists(dbFile);
+        }
     }
 
     private static void testTemplaterReplacesPlaceholder() {

@@ -21,6 +21,15 @@ public class Db {
         this.password = password;
     }
 
+    public static void configure(String url) {
+        configure(url, "", "");
+    }
+
+    public static void configure(String url, String user, String password) {
+        ensureDirectories(url);
+        instance = new Db(url, user, password);
+    }
+
     public static void init() {
         for (String entry : System.getProperty("java.class.path").split(File.pathSeparator)) {
             File f = new File(entry);
@@ -41,8 +50,7 @@ public class Db {
                     Class<?> c = Class.forName(name);
                     if (c.isAnnotationPresent(Database.class)) {
                         Database ann = c.getAnnotation(Database.class);
-                        ensureDirectories(ann.url());
-                        instance = new Db(ann.url(), ann.user(), ann.password());
+                        configure(ann.url(), ann.user(), ann.password());
                         instance.sync(findTableClasses().toArray(new Class[0]));
                         return;
                     }
