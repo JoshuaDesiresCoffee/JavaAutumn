@@ -16,11 +16,15 @@ public class App {
 
         router.GET("/", IndexHandler::get);
         router.GET("/users", IndexHandler::listUsers);
+        router.GET("/artworks", ArtworkHandler::list);
 
         router.GET("/api/user/all", UserAPIHandler::list);
+        router.GET("/api/artwork/all", ArtworkHandler::api);
         router.GET("/api/user_create", UserAPIHandler::create);
         router.GET("/api/user_update", UserAPIHandler::update);
         router.GET("/api/user_delete", UserAPIHandler::delete);
+
+        SampleData.ensure();
 
         router.serve();
     }

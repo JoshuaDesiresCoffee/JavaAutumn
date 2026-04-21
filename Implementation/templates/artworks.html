@@ -1,0 +1,43 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Artworks</title>
+        <link rel="stylesheet" href="/static/style.css">
+    </head>
+    <body>
+        <h1>Artworks</h1>
+
+        <div class="buttons">
+            <a class="table-link" href="/">Home</a>
+            <a class="table-link" href="/users">Users</a>
+            <a class="table-link active" href="/artworks">Artworks</a>
+            <a class="table-link" href="/api/artwork/all">Artworks API</a>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Artwork</th>
+                        <th>Material</th>
+                        <th>Artist</th>
+                        <th>Provenance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each artworks}}
+                        <tr>
+                            <td>{{ id }}</td>
+                            <td>{{ displayedAs }}</td>
+                            <td>{{ material }}</td>
+                            <td>{{ artist }}</td>
+                            <td>{{ provenance }}</td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+    </body>
+</html>
