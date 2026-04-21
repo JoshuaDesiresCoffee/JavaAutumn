@@ -52,7 +52,7 @@ public class UserAPIHandler {
             u.id = Integer.parseInt(idStr);
             u.name = name;
             u.email = email;
-            Db.instance.UPDATE(u).WHERE("id = " + u.id).EXEC();
+            Db.instance.UPDATE(u).BY_ID(u.id).EXEC();
 
             exchange.redirect("/users");
         } catch (Exception e) {
@@ -68,7 +68,7 @@ public class UserAPIHandler {
                 return;
             }
 
-            Db.instance.DELETE.FROM(User.class).WHERE("id = " + Integer.parseInt(idStr)).EXEC();
+            Db.instance.DELETE.FROM(User.class).BY_ID(Integer.parseInt(idStr)).EXEC();
 
             exchange.redirect("/users");
         } catch (Exception e) {

@@ -35,6 +35,8 @@ public final class TestRunner {
         testJsonEscapesControlChars();
         testExchangeCharsetUtf8();
         testOrmInsertUsesPreparedStatement();
+        testOrmInsertSetsGeneratedId();
+        testOrmWhereObjectRejectsEmptyFilter();
         testShowUserEmptyDbDoesNotCrash();
         System.out.println("All MVP.tests passed.");
     }
@@ -111,21 +113,48 @@ public final class TestRunner {
 
     private static void testOrmInsertUsesPreparedStatement() {
         User u = new User();
-        u.id = 9999;
         u.name = "O'Brien";
-        u.email = "ob@test.com";
+        u.email = "ob-" + System.nanoTime() + "@test.com";
         try {
             Db.instance.INSERT(u).EXEC();
-            var found = Db.instance.SELECT.FROM(User.class).WHERE("id = 9999").EXEC();
+            assert u.id > 0 : "generated id should be set after insert";
+            var found = Db.instance.SELECT.FROM(User.class).WHERE("email = ?", u.email).EXEC();
             assert !found.isEmpty() : "inserted user should be found";
             assert "O'Brien".equals(found.getFirst().name) : "name with apostrophe should survive: " + found.getFirst().name;
         } finally {
-            Db.instance.DELETE.FROM(User.class).WHERE("id = 9999").EXEC();
+            if (u.id > 0) {
+                Db.instance.DELETE.FROM(User.class).BY_ID(u.id).EXEC();
+            }
+        }
+    }
+
+    private static void testOrmInsertSetsGeneratedId() {
+        User u = new User();
+        u.name = "Generated Id";
+        u.email = "generated-id-" + System.nanoTime() + "@test.com";
+        try {
+            Db.instance.INSERT(u).EXEC();
+            assert u.id > 0 : "insert should populate user.id";
+            var found = Db.instance.SELECT.FROM(User.class).BY_ID(u.id).EXEC();
+            assert found.size() == 1 : "inserted user should be found by id";
+        } finally {
+            if (u.id > 0) {
+                Db.instance.DELETE.FROM(User.class).BY_ID(u.id).EXEC();
+            }
+        }
+    }
+
+    private static void testOrmWhereObjectRejectsEmptyFilter() {
+        try {
+            Db.instance.SELECT.FROM(User.class).WHERE(new User()).EXEC();
+            assert false : "empty object filters should fail instead of selecting all rows";
+        } catch (RuntimeException expected) {
+            assert expected.getMessage() != null && expected.getMessage().contains("no values");
         }
     }
 
     private static void testShowUserEmptyDbDoesNotCrash() {
-        var users = Db.instance.SELECT.FROM(User.class).WHERE("id = -1").EXEC();
+        var users = Db.instance.SELECT.FROM(User.class).WHERE("id = ?", -1).EXEC();
         assert users.isEmpty() : "query for non-existent id should return empty list";
     }
 

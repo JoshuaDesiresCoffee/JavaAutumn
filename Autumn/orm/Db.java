@@ -92,9 +92,9 @@ public class Db {
             StringBuilder sql = new StringBuilder("CREATE TABLE IF NOT EXISTS ")
                     .append(tableName(t)).append(" (");
 
-            Field[] fields = t.getDeclaredFields();
+            Field[] fields = persistentFields(t);
             for (int i = 0; i < fields.length; i++) {
-                sql.append(fields[i].getName()).append(" ").append(sqlType(fields[i].getType()));
+                sql.append(fields[i].getName()).append(" ").append(columnDefinition(fields[i]));
                 if (i < fields.length - 1) sql.append(", ");
             }
             sql.append(")");
@@ -112,9 +112,66 @@ public class Db {
         return DriverManager.getConnection(url, user, password);
     }
 
-    private static String tableName(Class<?> t) {
+    static String tableName(Class<?> t) {
         Table ann = t.getAnnotation(Table.class);
         return ann.name().isEmpty() ? t.getSimpleName().toLowerCase() : ann.name();
+    }
+
+    static Field[] persistentFields(Class<?> tableClass) {
+        return Arrays.stream(tableClass.getDeclaredFields())
+                .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                .filter(field -> !Modifier.isTransient(field.getModifiers()))
+                .filter(field -> !field.isSynthetic())
+                .toArray(Field[]::new);
+    }
+
+    static Optional<Field> idField(Class<?> tableClass) {
+        return Arrays.stream(persistentFields(tableClass))
+                .filter(field -> field.isAnnotationPresent(Id.class))
+                .findFirst();
+    }
+
+    static boolean isGeneratedId(Field field) {
+        Id id = field.getAnnotation(Id.class);
+        return id != null && id.autoIncrement();
+    }
+
+    boolean isPrimaryKeyColumn(Class<?> tableClass, String columnName) {
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA table_info(" + tableName(tableClass) + ")")) {
+            while (rs.next()) {
+                if (columnName.equals(rs.getString("name"))) {
+                    return rs.getInt("pk") > 0;
+                }
+            }
+            return false;
+        } catch (SQLException e) {
+            throw new RuntimeException("Primary key lookup failed for " + tableName(tableClass), e);
+        }
+    }
+
+    long nextId(Class<?> tableClass, String columnName) {
+        String sql = "SELECT COALESCE(MAX(" + columnName + "), 0) + 1 FROM " + tableName(tableClass);
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            return rs.next() ? rs.getLong(1) : 1;
+        } catch (SQLException e) {
+            throw new RuntimeException("Next id lookup failed for " + tableName(tableClass), e);
+        }
+    }
+
+    private static String columnDefinition(Field field) {
+        if (field.isAnnotationPresent(Id.class)) {
+            StringBuilder sql = new StringBuilder("INTEGER PRIMARY KEY");
+            if (isGeneratedId(field)) {
+                sql.append(" AUTOINCREMENT");
+            }
+            return sql.toString();
+        }
+
+        return sqlType(field.getType());
     }
 
     private static String sqlType(Class<?> type) {
