@@ -7,7 +7,6 @@ import Autumn.templating.Templater;
 import Implementation.repository.User;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,13 +22,7 @@ public class IndexHandler {
         );
 
         String html = Templater.render("index.html", view);
-        byte[] payload = html.getBytes(StandardCharsets.UTF_8);
-
-        exchange.getResponseHeaders().set("Content-Type", "text/html");
-        exchange.sendResponseHeaders(200, payload.length);
-        try (var os = exchange.getResponseBody()) {
-            os.write(payload);
-        }
+        exchange.html(html);
     }
 
     public static void listUsers(Exchange exchange) throws IOException {
@@ -43,12 +36,6 @@ public class IndexHandler {
         }
 
         String html = Templater.render("user.html", Map.of("users", userRows));
-        byte[] payload = html.getBytes(StandardCharsets.UTF_8);
-
-        exchange.getResponseHeaders().set("Content-Type", "text/html");
-        exchange.sendResponseHeaders(200, payload.length);
-        try (var os = exchange.getResponseBody()) {
-            os.write(payload);
-        }
+        exchange.html(html);
     }
 }

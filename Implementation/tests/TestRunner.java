@@ -32,6 +32,7 @@ public final class TestRunner {
         testReadTemplateLoadsExistingFile();
         testJsonEscapesSpecialChars();
         testJsonEscapesBackslash();
+        testJsonEscapesControlChars();
         testExchangeCharsetUtf8();
         testOrmInsertUsesPreparedStatement();
         testShowUserEmptyDbDoesNotCrash();
@@ -94,6 +95,12 @@ public final class TestRunner {
     private static void testJsonEscapesBackslash() {
         String json = Json.toJson(new TestObj("C:\\Users\\test"));
         assert json.contains("\\\\") : "backslash should be escaped: " + json;
+    }
+
+    private static void testJsonEscapesControlChars() {
+        String json = Json.toJson(new TestObj("quote\" slash\\ \b\f\n\r\t\u0001"));
+        String expected = "{\"value\":\"quote\\\" slash\\\\ \\b\\f\\n\\r\\t\\u0001\"}";
+        assert expected.equals(json) : "control characters should be escaped: " + json;
     }
 
     private static void testExchangeCharsetUtf8() {

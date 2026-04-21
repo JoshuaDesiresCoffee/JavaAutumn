@@ -30,22 +30,33 @@ public class Router {
         String normalizedMethod = method.toUpperCase(Locale.ROOT);
         Map<String, HttpHandler> handlersForPath = routesByPath.computeIfAbsent(path, key -> {
             server.createContext(path, exchange -> {
+                String requestPath = exchange.getRequestURI().getPath();
+                boolean prefixRoute = path.endsWith("/") && !path.equals("/");
+                boolean pathMatches = prefixRoute
+                        ? requestPath.startsWith(path)
+                        : requestPath.equals(path);
+
+                if (!pathMatches) {
+                    sendError(exchange, 404, "Not found");
+                    return;
+                }
+
                 Map<String, HttpHandler> handlers = routesByPath.get(path);
                 HttpHandler matchedHandler = handlers == null
                         ? null
                         : handlers.get(exchange.getRequestMethod().toUpperCase(Locale.ROOT));
 
                 if (matchedHandler == null) {
-                    exchange.sendResponseHeaders(405, -1);
-                    exchange.close();
+                    sendError(exchange, 405, "Method not allowed");
                     return;
                 }
 
                 try {
                     matchedHandler.handle(exchange);
                 } catch (Exception ex) {
-                    exchange.sendResponseHeaders(500, -1);
-                    exchange.close();
+                    System.err.println("Handler failed: " + exchange.getRequestMethod() + " " + requestPath);
+                    ex.printStackTrace();
+                    sendError(exchange, 500, "Internal server error");
                 }
             });
             return new ConcurrentHashMap<>();
@@ -68,4 +79,18 @@ public class Router {
     public void POST(String path, Handler h)   { handle("POST",   path, wrap(h)); }
     public void PUT(String path, Handler h)    { handle("PUT",    path, wrap(h)); }
     public void DELETE(String path, Handler h) { handle("DELETE", path, wrap(h)); }
+
+    private static void sendError(com.sun.net.httpserver.HttpExchange exchange, int status, String message) {
+        try {
+            byte[] payload = message.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=UTF-8");
+            exchange.sendResponseHeaders(status, payload.length);
+            try (var out = exchange.getResponseBody()) {
+                out.write(payload);
+            }
+        } catch (IOException ignored) {
+        } finally {
+            exchange.close();
+        }
+    }
 }
