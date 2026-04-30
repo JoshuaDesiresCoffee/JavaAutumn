@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class Exchange {
     private final HttpExchange raw;
@@ -33,6 +34,25 @@ public class Exchange {
 
     public String queryParam(String name, String fallback) {
         return queryParam(name).filter(value -> !value.isBlank()).orElse(fallback);
+    }
+
+    private Map<String, String> bodyParams = null;
+
+    public Optional<String> formParam(String name) {
+        if (bodyParams == null) {
+            try {
+                String bodyStr = new BufferedReader(new InputStreamReader(body(), StandardCharsets.UTF_8))
+                        .lines().collect(Collectors.joining("\n"));
+                bodyParams = parseParams(bodyStr);
+            } catch (Exception e) {
+                bodyParams = Map.of();
+            }
+        }
+        return Optional.ofNullable(bodyParams.get(name));
+    }
+
+    public String formParam(String name, String fallback) {
+        return formParam(name).filter(value -> !value.isBlank()).orElse(fallback);
     }
 
     public void html(String body) throws IOException {

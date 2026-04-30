@@ -48,6 +48,7 @@ public final class TestRunner {
             testTemplaterNullContextSafe();
             testTemplaterEachLoopRendersListOfMaps();
             testTemplaterEachLoopRendersScalarListViaThis();
+            testTemplaterNestedEachLoops();
             testReadTemplateRejectsPathTraversal();
             testReadTemplateLoadsExistingFile();
             testJsonEscapesSpecialChars();
@@ -100,6 +101,15 @@ public final class TestRunner {
         String template = "{{#each nums}}[{{this}}]{{/each}}";
         String out = Templater.renderText(template, Map.of("nums", List.of(1, 2, 3)));
         assert "[1][2][3]".equals(out) : "unexpected scalar loop output: " + out;
+    }
+
+    private static void testTemplaterNestedEachLoops() {
+        String template = "Outer: {{#each outer}}O{{this}} Inner: {{#each inner}}I{{this}}{{/each}} EndOuter {{/each}}";
+        String out = Templater.renderText(template, Map.of(
+            "outer", List.of(1, 2),
+            "inner", List.of("A", "B")
+        ));
+        assert "Outer: O1 Inner: IAIB EndOuter O2 Inner: IAIB EndOuter ".equals(out) : "unexpected nested loop output: " + out;
     }
 
     private static void testReadTemplateRejectsPathTraversal() throws IOException {

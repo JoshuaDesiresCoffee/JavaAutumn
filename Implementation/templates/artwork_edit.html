@@ -1,0 +1,51 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Edit Artwork - JavaAutumn</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/script.js" defer></script>
+    </head>
+    <body>
+        <h1>Edit Artwork: {{ artworkTitle }}</h1>
+
+        <div class="buttons">
+            <a class="table-link" href="/artworks">Back to Artworks</a>
+        </div>
+
+        <div class="form-container">
+            <form method="POST" action="/artworks/update">
+                <input type="hidden" name="id" value="{{ artworkId }}">
+                
+                <label>Title</label>
+                <input type="text" name="displayedAs" value="{{ artworkTitle }}" required style="width: 100%; margin-bottom: 12px;">
+                
+                <label>Material</label>
+                <input type="text" name="material" value="{{ artworkMaterial }}" required style="width: 100%; margin-bottom: 12px;">
+                
+                <label>Artist</label>
+                <select name="artistId" required style="width: 100%; margin-bottom: 12px;">
+                    {{#each artists}}
+                        <option value="{{ id }}">{{ displayedAs }}</option>
+                    {{/each}}
+                </select>
+
+                <label>Provenance</label>
+                <select name="provenanceId" required style="width: 100%; margin-bottom: 12px;">
+                    {{#each provenances}}
+                        <option value="{{ id }}">{{ displayedAs }}</option>
+                    {{/each}}
+                </select>
+
+                <button type="submit" style="width: 100%;">Save Changes</button>
+            </form>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const artistSelect = document.querySelector('select[name="artistId"]');
+                const provSelect = document.querySelector('select[name="provenanceId"]');
+                if (artistSelect) artistSelect.value = "{{ artworkArtistId }}";
+                if (provSelect) provSelect.value = "{{ artworkProvenanceId }}";
+            });
+        </script>
+    </body>
+</html>

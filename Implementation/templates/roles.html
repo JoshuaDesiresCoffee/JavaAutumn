@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roles — JavaAutumn</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/script.js" defer></script>
+</head>
+<body>
+    <h1>Roles</h1>
+
+    <div class="buttons">
+        <a class="table-link" href="/">Home</a>
+        <a class="table-link" href="/users">Users</a>
+        <a class="table-link" href="/artworks">Artworks</a>
+        <a class="table-link" href="/ratings">Ratings</a>
+        <a class="table-link" href="/stars">Stars</a>
+        <a class="table-link active" href="/roles">Roles</a>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Role Name</th>
+                    <th>Users</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each roles}}
+                <tr>
+                    <td>{{ id }}</td>
+                    <td>{{ displayedAs }}</td>
+                    <td>{{ userCount }}</td>
+                    <td>
+                        <form method="POST" action="/roles/delete" style="display:inline;">
+                            <input type="hidden" name="id" value="{{ id }}">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="form-container">
+        <h2>Create New Role</h2>
+        <form method="POST" action="/roles/create">
+            <input type="text" name="displayedAs" placeholder="Role name (e.g. GUEST)" required>
+            <button type="submit">Create Role</button>
+        </form>
+    </div>
+
+    <div class="form-container">
+        <h2>Assign User to Role</h2>
+        <form method="POST" action="/roles/assign">
+            <select name="userId" required>
+                <option value="">Select User...</option>
+                {{#each users}}
+                    <option value="{{ id }}">{{ name }}</option>
+                {{/each}}
+            </select>
+            <select name="roleId" required>
+                <option value="">Select Role...</option>
+                {{#each roles}}
+                    <option value="{{ id }}">{{ displayedAs }}</option>
+                {{/each}}
+            </select>
+            <button type="submit">Assign</button>
+        </form>
+    </div>
+</body>
+</html>

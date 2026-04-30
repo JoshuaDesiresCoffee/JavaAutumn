@@ -2,7 +2,7 @@ param(
     [switch]$SkipBuild,
     [string]$MainClass = "Implementation.App",
     [string]$JarPath = "Autumn/lib/sqlite-jdbc-3.51.3.0.jar",
-    [string]$JavaRelease = "25"
+    [string]$JavaRelease = "23"
 )
 
 $ErrorActionPreference = "Stop"

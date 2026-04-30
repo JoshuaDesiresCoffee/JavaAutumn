@@ -1,0 +1,22 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Error - JavaAutumn</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/script.js" defer></script>
+    </head>
+    <body>
+        <div style="text-align: center; margin-top: 60px;">
+            <h1 style="font-size: 3.5rem; color: #d95d39; margin-bottom: 10px;">⚠️ Action Denied</h1>
+            
+            <div style="margin: 40px auto; max-width: 600px; line-height: 1.6; color: var(--text-main); background: var(--bg-panel); padding: 40px; border-radius: 12px; border: 1px solid var(--accent-orange); box-shadow: 0 8px 32px rgba(217, 93, 57, 0.2);">
+                <p style="font-size: 1.2rem; margin-bottom: 25px;">{{ errorMessage }}</p>
+                
+                <div style="margin-top: 30px;">
+                    <button onclick="window.history.back()" class="table-link active" style="font-size: 1.1rem; padding: 12px 24px; cursor: pointer; border: none; color: white;">← Go Back</button>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

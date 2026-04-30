@@ -22,7 +22,6 @@ import java.util.regex.Pattern;
 public final class Templater {
 
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\{\\{\\s*([a-zA-Z0-9_.-]+)\\s*}}");
-    private static final Pattern EACH_BLOCK_PATTERN = Pattern.compile("\\{\\{#each\\s+([a-zA-Z0-9_.-]+)\\s*}}(.*?)\\{\\{/each}}", Pattern.DOTALL);
     private static final Path TEMPLATE_ROOT = Path.of("Implementation", "templates").toAbsolutePath().normalize();
 
     private Templater() {
@@ -53,19 +52,79 @@ public final class Templater {
     }
 
     private static String renderEachBlocks(String template, Map<String, ?> context) {
-        Matcher loopMatcher = EACH_BLOCK_PATTERN.matcher(template);
-        StringBuffer out = new StringBuffer();
+        StringBuilder out = new StringBuilder();
+        int currentIndex = 0;
 
-        while (loopMatcher.find()) {
-            String collectionKey = loopMatcher.group(1);
-            String blockTemplate = loopMatcher.group(2);
-            Object collectionValue = resolveValue(context, collectionKey);
+        while (true) {
+            int startIndex = findEachOpen(template, currentIndex);
+            if (startIndex == -1) {
+                out.append(template.substring(currentIndex));
+                break;
+            }
+
+            out.append(template, currentIndex, startIndex);
+
+            int keyEndIndex = template.indexOf("}}", startIndex);
+            if (keyEndIndex == -1) {
+                out.append(template, startIndex, startIndex + 7);
+                currentIndex = startIndex + 7;
+                continue;
+            }
+
+            String tagContent = template.substring(startIndex + 7, keyEndIndex).trim();
+            int blockStartIndex = keyEndIndex + 2;
+
+            int depth = 1;
+            int searchIndex = blockStartIndex;
+            int blockEndIndex = -1;
+            int nextEndIndex = -1;
+
+            while (depth > 0) {
+                int nextOpen = findEachOpen(template, searchIndex);
+                int nextClose = template.indexOf("{{/each}}", searchIndex);
+
+                if (nextClose == -1) {
+                    break;
+                }
+
+                if (nextOpen != -1 && nextOpen < nextClose) {
+                    depth++;
+                    searchIndex = nextOpen + 7;
+                } else {
+                    depth--;
+                    searchIndex = nextClose + 9;
+                    if (depth == 0) {
+                        blockEndIndex = nextClose;
+                        nextEndIndex = searchIndex;
+                    }
+                }
+            }
+
+            if (blockEndIndex == -1) {
+                out.append(template, startIndex, keyEndIndex + 2);
+                currentIndex = keyEndIndex + 2;
+                continue;
+            }
+
+            String blockTemplate = template.substring(blockStartIndex, blockEndIndex);
+            Object collectionValue = resolveValue(context, tagContent);
             String replacement = renderEachBlock(collectionValue, blockTemplate, context);
-            loopMatcher.appendReplacement(out, Matcher.quoteReplacement(replacement));
+            out.append(replacement);
+            currentIndex = nextEndIndex;
         }
 
-        loopMatcher.appendTail(out);
         return out.toString();
+    }
+
+    private static int findEachOpen(String text, int fromIndex) {
+        int idx = text.indexOf("{{#each", fromIndex);
+        while (idx != -1) {
+            if (idx + 7 < text.length() && Character.isWhitespace(text.charAt(idx + 7))) {
+                return idx;
+            }
+            idx = text.indexOf("{{#each", idx + 7);
+        }
+        return -1;
     }
 
     private static String renderEachBlock(Object collectionValue, String blockTemplate, Map<String, ?> parentContext) {

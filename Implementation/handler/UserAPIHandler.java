@@ -72,7 +72,15 @@ public class UserAPIHandler {
 
             exchange.redirect("/users");
         } catch (Exception e) {
-            exchange.send(500, e.getMessage());
+            String msg = e.getMessage();
+            if (e.getCause() != null) {
+                msg += " " + e.getCause().getMessage();
+            }
+            if (msg.contains("FOREIGN KEY constraint failed")) {
+                exchange.html(Autumn.templating.Templater.render("error.html", java.util.Map.of("errorMessage", "Cannot delete User because it is still referenced by other records (e.g., Ratings).")));
+            } else {
+                exchange.html(Autumn.templating.Templater.render("error.html", java.util.Map.of("errorMessage", e.getMessage())));
+            }
         }
     }
 

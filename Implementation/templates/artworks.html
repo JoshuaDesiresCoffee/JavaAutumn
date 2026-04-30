@@ -4,6 +4,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Artworks</title>
         <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/script.js" defer></script>
     </head>
     <body>
         <h1>Artworks</h1>
@@ -12,6 +13,9 @@
             <a class="table-link" href="/">Home</a>
             <a class="table-link" href="/users">Users</a>
             <a class="table-link active" href="/artworks">Artworks</a>
+            <a class="table-link" href="/ratings">Ratings</a>
+            <a class="table-link" href="/stars">Stars</a>
+            <a class="table-link" href="/roles">Roles</a>
             <a class="table-link" href="/api/artwork/all">Artworks API</a>
         </div>
 
@@ -24,6 +28,8 @@
                         <th>Material</th>
                         <th>Artist</th>
                         <th>Provenance</th>
+                        <th>Actions</th>
+                        <th>Rate</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -34,10 +40,62 @@
                             <td>{{ material }}</td>
                             <td>{{ artist }}</td>
                             <td>{{ provenance }}</td>
+                            <td>
+                                <form method="GET" action="/artworks/edit" style="display:inline;">
+                                    <input type="hidden" name="id" value="{{ id }}">
+                                    <button type="submit" style="background: var(--accent-gold); color: #1e1611;">Edit</button>
+                                </form>
+                                <form method="POST" action="/artworks/delete" style="display:inline;">
+                                    <input type="hidden" name="id" value="{{ id }}">
+                                    <button type="submit" class="btn-danger">Delete</button>
+                                </form>
+                            </td>
+                            <td>
+                                <form method="POST" action="/ratings/create" style="display:inline;">
+                                    <input type="hidden" name="artworkId" value="{{ id }}">
+                                    <select name="userId" required>
+                                        <option value="">Rate as...</option>
+                                        {{#each users}}
+                                            <option value="{{ id }}">{{ name }}</option>
+                                        {{/each}}
+                                    </select>
+                                    <select name="starsId" required>
+                                        <option value="">Stars...</option>
+                                        {{#each starsList}}
+                                            <option value="{{ id }}">{{ displayedAs }}</option>
+                                        {{/each}}
+                                    </select>
+                                    <button type="submit">Rate</button>
+                                </form>
+                            </td>
                         </tr>
                     {{/each}}
                 </tbody>
             </table>
+        </div>
+
+        <div class="form-container">
+            <h2>Add New Artwork</h2>
+            <form method="POST" action="/artworks/create">
+                <input type="text" name="displayedAs" placeholder="Artwork Title" required>
+                <input type="text" name="material" placeholder="Material" required>
+                
+                <select name="artistId" required>
+                    <option value="">Select Artist...</option>
+                    {{#each artists}}
+                        <option value="{{ id }}">{{ displayedAs }}</option>
+                    {{/each}}
+                </select>
+
+                <select name="provenanceId" required>
+                    <option value="">Select Provenance...</option>
+                    {{#each provenances}}
+                        <option value="{{ id }}">{{ displayedAs }}</option>
+                    {{/each}}
+                </select>
+
+                <button type="submit">Create Artwork</button>
+            </form>
         </div>
     </body>
 </html>
