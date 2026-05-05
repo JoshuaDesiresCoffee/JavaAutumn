@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,7 +18,9 @@ import java.util.regex.Pattern;
 /**
  * Minimal template engine:
  * - Loads template text by path
- * - Replaces {{ key }} placeholders with values from a context map
+ * - {@code {{#if key}} ... {{/if}}} when {@code key} is truthy in context
+ * - {@code {{#each key}} ... {{/each}}} lists
+ * - {@code {{ key }}} placeholders
  */
 public final class Templater {
 
@@ -35,7 +38,8 @@ public final class Templater {
     public static String renderText(String template, Map<String, ?> context) {
         // Null context treated like empty data so callers can pass null safely
         Map<String, ?> data = context == null ? Collections.emptyMap() : context;
-        String withLoops = renderEachBlocks(template, data);
+        String afterIf = renderIfBlocks(template, data);
+        String withLoops = renderEachBlocks(afterIf, data);
         Matcher matcher = PLACEHOLDER_PATTERN.matcher(withLoops);
         StringBuilder rendered = new StringBuilder();
 
@@ -49,6 +53,97 @@ public final class Templater {
 
         matcher.appendTail(rendered);
         return rendered.toString();
+    }
+
+    private static String renderIfBlocks(String template, Map<String, ?> context) {
+        StringBuilder out = new StringBuilder();
+        int currentIndex = 0;
+
+        while (true) {
+            int startIndex = template.indexOf("{{#if", currentIndex);
+            if (startIndex == -1) {
+                out.append(template.substring(currentIndex));
+                break;
+            }
+
+            out.append(template, currentIndex, startIndex);
+
+            int keyEndIndex = template.indexOf("}}", startIndex);
+            if (keyEndIndex == -1) {
+                out.append(template.substring(startIndex));
+                break;
+            }
+
+            int condStart = startIndex + "{{#if".length();
+            while (condStart < template.length() && Character.isWhitespace(template.charAt(condStart))) {
+                condStart++;
+            }
+            String condKey = template.substring(condStart, keyEndIndex).trim();
+
+            int blockStartIndex = keyEndIndex + 2;
+            int depth = 1;
+            int searchIndex = blockStartIndex;
+            int blockEndIndex = -1;
+            int nextEndIndex = -1;
+
+            while (depth > 0) {
+                int nextOpen = template.indexOf("{{#if", searchIndex);
+                int nextClose = template.indexOf("{{/if}}", searchIndex);
+
+                if (nextClose == -1) {
+                    break;
+                }
+
+                if (nextOpen != -1 && nextOpen < nextClose) {
+                    depth++;
+                    searchIndex = nextOpen + "{{#if".length();
+                } else {
+                    depth--;
+                    searchIndex = nextClose + "{{/if}}".length();
+                    if (depth == 0) {
+                        blockEndIndex = nextClose;
+                        nextEndIndex = searchIndex;
+                    }
+                }
+            }
+
+            if (blockEndIndex == -1) {
+                out.append(template, startIndex, keyEndIndex + 2);
+                currentIndex = keyEndIndex + 2;
+                continue;
+            }
+
+            String blockTemplate = template.substring(blockStartIndex, blockEndIndex);
+            Object condVal = condKey.isEmpty() ? null : resolveValue(context, condKey);
+            if (isTruthy(condVal)) {
+                out.append(renderText(blockTemplate, context));
+            }
+            currentIndex = nextEndIndex;
+        }
+
+        return out.toString();
+    }
+
+    private static boolean isTruthy(Object v) {
+        if (v == null) {
+            return false;
+        }
+        if (v instanceof Boolean b) {
+            return b;
+        }
+        if (v instanceof String s) {
+            return !s.isBlank();
+        }
+        if (v instanceof Number n) {
+            return n.doubleValue() != 0;
+        }
+        if (v instanceof Collection<?> c) {
+            return !c.isEmpty();
+        }
+        if (v instanceof Map<?, ?> m) {
+            return !m.isEmpty();
+        }
+        return true;
     }
 
     private static String renderEachBlocks(String template, Map<String, ?> context) {
