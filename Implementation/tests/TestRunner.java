@@ -8,7 +8,7 @@ import Autumn.orm.Query;
 import Autumn.orm.Table;
 import Autumn.templating.Json;
 import Autumn.templating.Templater;
-import Implementation.SampleData;
+import Implementation.SeedDatabase;
 import Implementation.repository.Artist;
 import Implementation.repository.ArtistEpoch;
 import Implementation.repository.Artwork;
@@ -40,11 +40,13 @@ public final class TestRunner {
         Path dbFile = Files.createTempFile("javaautumn-test-", ".db");
         try {
             Db.configure("jdbc:sqlite:" + dbFile);
-            SampleData.syncSchema();
+            // Do not call SeedDatabase.syncSchema(): it re-configures Db to app.db and breaks isolation.
+            Db.instance.sync(SeedDatabase.TABLES);
             Db.instance.sync(Post.class);
 
             testTemplaterReplacesPlaceholder();
             testTemplaterMissingKeyRendersEmpty();
+            testTemplaterIfBlock();
             testTemplaterNullContextSafe();
             testTemplaterEachLoopRendersListOfMaps();
             testTemplaterEachLoopRendersScalarListViaThis();
@@ -62,7 +64,7 @@ public final class TestRunner {
             testOrmForeignKeyRejectsMissingParent();
             testOrmForeignKeyAllowsExistingParent();
             testOrmRejectsForeignKeyOnId();
-            testSampleDataCreatesArtDomain();
+            testSeedDatabaseCreatesArtDomain();
             testSampleArtworkRequiresExistingArtist();
             testShowUserEmptyDbDoesNotCrash();
             System.out.println("All MVP.tests passed.");
@@ -79,6 +81,17 @@ public final class TestRunner {
     private static void testTemplaterMissingKeyRendersEmpty() {
         String out = Templater.renderText("Hi {{nothing}}", Map.of());
         assert "Hi ".equals(out) : "expected 'Hi ', got: " + out;
+    }
+
+    private static void testTemplaterIfBlock() {
+        String t = "{{#if show}}YES{{/if}}{{ tail }}";
+        String out = Templater.renderText(t, Map.of("show", true, "tail", "Z"));
+        assert "YESZ".equals(out) : "expected YESZ, got: " + out;
+        String out2 = Templater.renderText(t, Map.of("show", false, "tail", "Z"));
+        assert "Z".equals(out2) : "expected Z, got: " + out2;
+        String nested = "{{#if a}}A{{#if b}}B{{/if}}{{/if}}";
+        assert "AB".equals(Templater.renderText(nested, Map.of("a", true, "b", true)));
+        assert "A".equals(Templater.renderText(nested, Map.of("a", true, "b", false)));
     }
 
     private static void testTemplaterNullContextSafe() {
@@ -252,11 +265,12 @@ public final class TestRunner {
         }
     }
 
-    private static void testSampleDataCreatesArtDomain() {
-        SampleData.ensure();
-        assert Db.instance.SELECT.FROM(Artist.class).EXEC().size() == 2 : "sample should include two artists";
-        assert Db.instance.SELECT.FROM(Artwork.class).EXEC().size() == 2 : "sample should include two artworks";
-        assert Db.instance.SELECT.FROM(ArtistEpoch.class).EXEC().size() == 2 : "sample should link artists to epochs";
+    private static void testSeedDatabaseCreatesArtDomain() {
+        SeedDatabase.populateIfEmpty();
+        // Counts mirror SeedDatabase.insertDemoData on a fresh DB
+        assert Db.instance.SELECT.FROM(Artist.class).EXEC().size() == 5 : "sample should include five artists";
+        assert Db.instance.SELECT.FROM(Artwork.class).EXEC().size() == 6 : "sample should include six artworks";
+        assert Db.instance.SELECT.FROM(ArtistEpoch.class).EXEC().size() == 6 : "sample should link artists to epochs";
     }
 
     private static void testSampleArtworkRequiresExistingArtist() {
