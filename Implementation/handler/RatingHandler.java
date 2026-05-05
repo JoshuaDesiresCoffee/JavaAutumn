@@ -1,120 +1,85 @@
 package Implementation.handler;
 
+import Autumn.handler.BaseHandler;
+import Autumn.handler.CrudHandler;
 import Autumn.handler.Exchange;
 import Autumn.orm.Db;
 import Autumn.templating.ObjectToMapConverter;
 import Autumn.templating.Templater;
-import Implementation.repository.*;
+import Implementation.repository.Artwork;
+import Implementation.repository.Rating;
+import Implementation.repository.Stars;
+import Implementation.repository.User;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-public class RatingHandler {
+public class RatingHandler extends CrudHandler<Rating> {
 
-    public static void list(Exchange exchange) throws IOException {
-        var ratings   = Db.instance.SELECT.FROM(Rating.class).EXEC();
-        var artworks  = Db.instance.SELECT.FROM(Artwork.class).EXEC();
-        var users     = Db.instance.SELECT.FROM(User.class).EXEC();
-        var starsList = Db.instance.SELECT.FROM(Stars.class).EXEC();
-
-        Map<Integer, String> artworkNames = new HashMap<>();
-        for (Artwork a : artworks) artworkNames.put(a.id, a.displayedAs);
-
-        Map<Integer, String> userNames = new HashMap<>();
-        for (User u : users) userNames.put(u.id, u.name);
-
-        Map<Integer, String> starsDisplay = new HashMap<>();
-        for (Stars s : starsList) starsDisplay.put(s.id, s.displayedAs);
-
-        List<Map<String, Object>> rows = new ArrayList<>();
-        for (Rating r : ratings) {
-            Map<String, Object> row = ObjectToMapConverter.convert(r);
-            if (row == null) continue;
-            row.put("artworkName", artworkNames.getOrDefault(r.artworkId, ""));
-            row.put("userName",    userNames.getOrDefault(r.userId, ""));
-            row.put("starsLabel",  starsDisplay.getOrDefault(r.starsId, ""));
-            rows.add(row);
-        }
-
-        List<Map<String, Object>> artworkRows = new ArrayList<>();
-        for (Artwork a : artworks) {
-            Map<String, Object> m = ObjectToMapConverter.convert(a);
-            if (m != null) artworkRows.add(m);
-        }
-
-        List<Map<String, Object>> userRows = new ArrayList<>();
-        for (User u : users) {
-            Map<String, Object> m = ObjectToMapConverter.convert(u);
-            if (m != null) userRows.add(m);
-        }
-
-        List<Map<String, Object>> starsRows = new ArrayList<>();
-        for (Stars s : starsList) {
-            Map<String, Object> m = ObjectToMapConverter.convert(s);
-            if (m != null) starsRows.add(m);
-        }
-
-        exchange.html(Templater.render("ratings.html", Map.of(
-            "ratings",  rows,
-            "artworks", artworkRows,
-            "users",    userRows,
-            "starsList", starsRows
-        )));
+    public RatingHandler() {
+        super(Rating.class, "/ratings", "ratings.html", "ratings");
     }
 
-    public static void create(Exchange exchange) throws IOException {
+    /** Joins ratings with artwork/user/stars labels, so we render manually. */
+    @Override
+    public void list(Exchange exchange) throws IOException {
         try {
-            String artworkIdStr = exchange.formParam("artworkId", "");
-            String userIdStr    = exchange.formParam("userId", "");
-            String starsIdStr   = exchange.formParam("starsId", "");
-            String displayedAs  = exchange.formParam("displayedAs", "").trim();
+            List<Rating> ratings   = Db.instance.SELECT.FROM(Rating.class).EXEC();
+            List<Artwork> artworks = Db.instance.SELECT.FROM(Artwork.class).EXEC();
+            List<User> users       = Db.instance.SELECT.FROM(User.class).EXEC();
+            List<Stars> starsList  = Db.instance.SELECT.FROM(Stars.class).EXEC();
 
-            if (artworkIdStr.isBlank() || userIdStr.isBlank() || starsIdStr.isBlank()) {
-                exchange.send(400, "artworkId, userId and starsId are required");
-                return;
+            Map<Integer, String> artworkNames = new HashMap<>();
+            for (Artwork a : artworks) artworkNames.put(a.id, a.displayedAs);
+            Map<Integer, String> userNames = new HashMap<>();
+            for (User u : users) userNames.put(u.id, u.name);
+            Map<Integer, String> starsLabels = new HashMap<>();
+            for (Stars s : starsList) starsLabels.put(s.id, s.displayedAs);
+
+            List<Map<String, Object>> rows = new ArrayList<>();
+            for (Rating r : ratings) {
+                Map<String, Object> row = ObjectToMapConverter.convert(r);
+                if (row == null) continue;
+                row.put("artworkName", artworkNames.getOrDefault(r.artworkId, ""));
+                row.put("userName",    userNames.getOrDefault(r.userId, ""));
+                row.put("starsLabel",  starsLabels.getOrDefault(r.starsId, ""));
+                rows.add(row);
             }
 
-            int artworkId = Integer.parseInt(artworkIdStr);
-            int userId    = Integer.parseInt(userIdStr);
-            int starsId   = Integer.parseInt(starsIdStr);
-
-            // Uniqueness check
-            var existing = Db.instance.SELECT.FROM(Rating.class).EXEC();
-            for (Rating r : existing) {
-                if (r.userId == userId && r.artworkId == artworkId) {
-                    exchange.send(400, "Error: User has already rated this artwork.");
-                    return;
-                }
-            }
-
-            // Auto-generate displayedAs if blank
-            if (displayedAs.isBlank()) {
-                var stars = Db.instance.SELECT.FROM(Stars.class).WHERE("id = ?", starsId).EXEC();
-                displayedAs = stars.isEmpty() ? "rating" : stars.get(0).displayedAs + " rating";
-            }
-
-            Rating rating = new Rating();
-            rating.displayedAs = displayedAs;
-            rating.starsId     = starsId;
-            rating.userId      = userId;
-            rating.artworkId   = artworkId;
-            Db.instance.INSERT(rating).EXEC();
-
-            exchange.redirect("/ratings");
-        } catch (Exception e) {
-            exchange.send(500, "Failed to create rating: " + e.getMessage());
-        }
-    }
-
-    public static void delete(Exchange exchange) throws IOException {
-        try {
-            String idStr = exchange.formParam("id", "");
-            if (idStr.isBlank()) idStr = exchange.queryParam("id", "");
-            if (idStr.isBlank()) { exchange.send(400, "id is required"); return; }
-            Db.instance.DELETE.FROM(Rating.class).BY_ID(Integer.parseInt(idStr)).EXEC();
-            exchange.redirect("/ratings");
+            exchange.html(Templater.render(listTemplate, Map.of(
+                    "ratings",   rows,
+                    "artworks",  BaseHandler.toRows(artworks),
+                    "users",     BaseHandler.toRows(users),
+                    "starsList", BaseHandler.toRows(starsList)
+            )));
         } catch (Exception e) {
             exchange.send(500, e.getMessage());
         }
+    }
+
+    @Override
+    protected Rating bindFromForm(Exchange exchange, boolean includeId) throws Exception {
+        Rating rating = super.bindFromForm(exchange, includeId);
+        if (rating.displayedAs == null || rating.displayedAs.isBlank()) {
+            List<Stars> stars = Db.instance.SELECT.FROM(Stars.class).WHERE("id = ?", rating.starsId).EXEC();
+            rating.displayedAs = stars.isEmpty() ? "rating" : stars.get(0).displayedAs + " rating";
+        }
+        return rating;
+    }
+
+    @Override
+    protected String validate(Rating rating) {
+        if (rating.artworkId == 0) return "artworkId is required";
+        if (rating.userId == 0)    return "userId is required";
+        if (rating.starsId == 0)   return "starsId is required";
+        for (Rating existing : Db.instance.SELECT.FROM(Rating.class).EXEC()) {
+            if (existing.userId == rating.userId && existing.artworkId == rating.artworkId) {
+                return "Error: User has already rated this artwork.";
+            }
+        }
+        return null;
     }
 }

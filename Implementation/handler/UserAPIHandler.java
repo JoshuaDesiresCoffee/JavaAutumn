@@ -1,90 +1,52 @@
 package Implementation.handler;
 
+import Autumn.handler.CrudHandler;
 import Autumn.handler.Exchange;
-import Autumn.orm.Db;
-import Autumn.templating.Json;
 import Implementation.repository.User;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
-public class UserAPIHandler {
+/**
+ * GET-based JSON API for users. Reads parameters from the query string instead of
+ * the form body, but otherwise reuses the standard CRUD machinery.
+ */
+public class UserAPIHandler extends CrudHandler<User> {
 
-    public static void list(Exchange exchange) throws IOException {
-        try {
-            var users = Db.instance.SELECT.FROM(User.class).EXEC();
-            exchange.json(Json.toJson(users));
-        } catch (Exception e) {
-            exchange.send(500, e.getMessage());
-        }
+    public UserAPIHandler() {
+        super(User.class, "/users", "user.html", "users");
     }
 
-    public static void create(Exchange exchange) throws IOException {
-        try {
-            String name = requestParam(exchange, "name", "");
-            String email = requestParam(exchange, "email", "");
-            if (name.isBlank() || email.isBlank()) {
-                exchange.send(400, "name and email are required");
-                return;
-            }
-
-            User u = new User();
-            u.name = name;
-            u.email = email;
-            Db.instance.INSERT(u).EXEC();
-
-            exchange.redirect("/users");
-        } catch (Exception e) {
-            exchange.send(500, e.getMessage());
-        }
+    /** The list endpoint emits JSON, not HTML. */
+    @Override
+    public void list(Exchange exchange) throws IOException {
+        api(exchange);
     }
 
-    public static void update(Exchange exchange) throws IOException {
-        try {
-            String idStr = requestParam(exchange, "id", "");
-            String name = requestParam(exchange, "name", "");
-            String email = requestParam(exchange, "email", "");
-            if (idStr.isBlank() || name.isBlank() || email.isBlank()) {
-                exchange.send(400, "id, name and email are required");
-                return;
-            }
-
-            User u = new User();
-            u.id = Integer.parseInt(idStr);
-            u.name = name;
-            u.email = email;
-            Db.instance.UPDATE(u).BY_ID(u.id).EXEC();
-
-            exchange.redirect("/users");
-        } catch (Exception e) {
-            exchange.send(500, e.getMessage());
-        }
-    }
-
-    public static void delete(Exchange exchange) throws IOException {
-        try {
-            String idStr = requestParam(exchange, "id", "");
-            if (idStr.isBlank()) {
-                exchange.send(400, "id is required");
-                return;
-            }
-
-            Db.instance.DELETE.FROM(User.class).BY_ID(Integer.parseInt(idStr)).EXEC();
-
-            exchange.redirect("/users");
-        } catch (Exception e) {
-            String msg = e.getMessage();
-            if (e.getCause() != null) {
-                msg += " " + e.getCause().getMessage();
-            }
-            if (msg.contains("FOREIGN KEY constraint failed")) {
-                exchange.html(Autumn.templating.Templater.render("error.html", java.util.Map.of("errorMessage", "Cannot delete User because it is still referenced by other records (e.g., Ratings).")));
+    /** Bind the entity from query parameters since these endpoints use GET. */
+    @Override
+    protected User bindFromForm(Exchange exchange, boolean includeId) throws Exception {
+        User user = new User();
+        for (Field f : User.class.getDeclaredFields()) {
+            if (Modifier.isStatic(f.getModifiers()) || f.isSynthetic()) continue;
+            if (!includeId && "id".equals(f.getName())) continue;
+            String raw = exchange.queryParam(f.getName(), "").trim();
+            if (raw.isBlank()) continue;
+            f.setAccessible(true);
+            if (f.getType() == int.class || f.getType() == Integer.class) {
+                f.set(user, Integer.parseInt(raw));
             } else {
-                exchange.html(Autumn.templating.Templater.render("error.html", java.util.Map.of("errorMessage", e.getMessage())));
+                f.set(user, raw);
             }
         }
+        return user;
     }
 
-    private static String requestParam(Exchange exchange, String key, String fallback) {
-        return exchange.queryParam(key, fallback).trim();
+    @Override
+    protected String validate(User user) {
+        if (user.name == null || user.name.isBlank()) return "name is required";
+        if (user.email == null || user.email.isBlank()) return "email is required";
+        return null;
     }
 }
