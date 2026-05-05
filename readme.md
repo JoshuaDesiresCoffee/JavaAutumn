@@ -88,42 +88,58 @@ Prerequisites:
 - Java 25 installed (`java -version`, `javac -version`)
 - SQLite JDBC jar at `Autumn.lib/sqlite-jdbc-3.51.3.0.jar`
 
-Build:
+Compile only:
 ```powershell
 .\build.ps1
 ```
 
-Run (build + start):
-```powershell
-.\run.ps1
-```
-
-Run without rebuilding:
-```powershell
-.\run.ps1 -SkipBuild
-```
-
-Optional: clean build output first:
+Optional: clean output first:
 ```powershell
 .\build.ps1 -Clean
 ```
 
-### Tests (no extra libraries)
-
-Uses Java’s built-in `assert` only; the JVM must enable assertions (`-ea`). Test sources live under `/Implementation.tests/` and compile with the app.
+Everything else goes through **`dev.ps1`** (build first unless you pass `-SkipBuild`):
 
 ```powershell
-.\test.ps1
+.\dev.ps1 run              # server (Implementation.App)
+.\dev.ps1 run -SkipBuild
+.\dev.ps1 test             # asserts; JVM `-ea`
+.\dev.ps1 test -SkipBuild
+.\dev.ps1 seed             # demo data if DB is empty
+.\dev.ps1 seed -Reset      # delete SQLite file, re-seed
+.\dev.ps1 kill             # stop listener on port 8080
 ```
 
-Skip rebuild:
+First time after clone: `.\dev.ps1 seed` once.
 
-```powershell
-.\test.ps1 -SkipBuild
+### macOS / Linux (bash)
+
+Make scripts executable once:
+
+```bash
+chmod +x build.sh dev.sh
 ```
 
-Equivalent manual command after `.\build.ps1`:
+Compile:
 
-```powershell
-java -ea -cp "out;Autumn.lib/sqlite-jdbc-3.51.3.0.jar" Implementation.tests.TestRunner
+```bash
+./build.sh
+./build.sh --clean
+```
+
+Same workflow as Windows, via **`dev.sh`**;
+
+```bash
+./dev.sh run
+./dev.sh run --skip-build
+./dev.sh test
+./dev.sh seed
+./dev.sh seed --reset
+./dev.sh kill               
+```
+
+Or
+
+```bash
+java -ea -cp "out:Autumn/lib/sqlite-jdbc-3.51.3.0.jar" Implementation.tests.TestRunner
 ```

@@ -1,5 +1,5 @@
 param(
-    [string]$JavaRelease = "21",
+    [string]$JavaRelease = "25",
     [string]$JarPath = "Autumn/lib/sqlite-jdbc-3.51.3.0.jar",
     [switch]$Clean
 )
