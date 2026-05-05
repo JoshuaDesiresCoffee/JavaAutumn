@@ -1,8 +1,17 @@
 package Implementation;
 
 import Autumn.Router;
+import Autumn.handler.BaseHandler;
 import Autumn.handler.StaticAssetHandler;
 import Implementation.handler.*;
+import Implementation.repository.Artist;
+import Implementation.repository.Artwork;
+import Implementation.repository.Epoch;
+import Implementation.repository.Provenance;
+import Implementation.repository.Rating;
+import Implementation.repository.Role;
+import Implementation.repository.Stars;
+import Implementation.repository.User;
 
 public class App {
 
@@ -10,61 +19,52 @@ public class App {
 
     public static void main(String[] args) {
 
-        SampleData.syncSchema();
-
         var router = new Router(PORT);
 
         router.GET("/static/", StaticAssetHandler.withRoot("/static/", "Implementation/static"));
 
-        // Home & Users
-        router.GET("/",           IndexHandler::get);
-        router.GET("/users",      IndexHandler::listUsers);
-        router.GET("/api/user/all",    UserAPIHandler::list);
-        router.GET("/api/user_create", UserAPIHandler::create);
-        router.GET("/api/user_update", UserAPIHandler::update);
-        router.GET("/api/user_delete", UserAPIHandler::delete);
-        
-        // Sidebar API
+        router.GET("/",      IndexHandler::get);
+        router.GET("/users", IndexHandler::listUsers);
+
+        var userApi = new UserAPIHandler();
+        router.GET("/api/user/all",    userApi::list);
+        router.GET("/api/user_create", userApi::create);
+        router.GET("/api/user_update", userApi::update);
+        router.GET("/api/user_delete", userApi::delete);
+
         router.GET("/api/sidebar", SidebarAPIHandler::getSidebarData);
 
-        // Entity Detail Pages
-        router.GET("/artist",     ex -> EntityDetailHandler.render(ex, "Artist", Implementation.repository.Artist.class));
-        router.GET("/artwork",    ex -> EntityDetailHandler.render(ex, "Artwork", Implementation.repository.Artwork.class));
-        router.GET("/provenance", ex -> EntityDetailHandler.render(ex, "Provenance", Implementation.repository.Provenance.class));
-        router.GET("/epoch",      ex -> EntityDetailHandler.render(ex, "Epoch", Implementation.repository.Epoch.class));
-        router.GET("/user",       ex -> EntityDetailHandler.render(ex, "User", Implementation.repository.User.class));
-        router.GET("/role",       ex -> EntityDetailHandler.render(ex, "Role", Implementation.repository.Role.class));
-        router.GET("/rating",     ex -> EntityDetailHandler.render(ex, "Rating", Implementation.repository.Rating.class));
-        router.GET("/stars",      ex -> EntityDetailHandler.render(ex, "Stars", Implementation.repository.Stars.class));
+        router.GET("/artist",     ex -> BaseHandler.renderDetail(ex, "Artist", Artist.class));
+        router.GET("/artwork",    ex -> BaseHandler.renderDetail(ex, "Artwork", Artwork.class));
+        router.GET("/provenance", ex -> BaseHandler.renderDetail(ex, "Provenance", Provenance.class));
+        router.GET("/epoch",      ex -> BaseHandler.renderDetail(ex, "Epoch", Epoch.class));
+        router.GET("/user",       ex -> BaseHandler.renderDetail(ex, "User", User.class));
+        router.GET("/role",       ex -> BaseHandler.renderDetail(ex, "Role", Role.class));
+        router.GET("/rating",     ex -> BaseHandler.renderDetail(ex, "Rating", Rating.class));
+        router.GET("/stars",      ex -> BaseHandler.renderDetail(ex, "Stars", Stars.class));
 
-        // Artworks
-        router.GET("/artworks",           ArtworkHandler::list);
-        router.GET("/artworks/edit",      ArtworkHandler::editForm);
-        router.POST("/artworks/create",   ArtworkHandler::create);
-        router.POST("/artworks/update",   ArtworkHandler::update);
-        router.POST("/artworks/delete",   ArtworkHandler::delete);
-        router.GET("/api/artwork/all",    ArtworkHandler::api);
+        var artworks = new ArtworkHandler();
+        artworks.registerCrud(router);
+        router.GET("/artworks/edit",   artworks::editForm);
+        router.GET("/api/artwork/all", artworks::api);
 
-        // Ratings
-        router.GET("/ratings",            RatingHandler::list);
-        router.POST("/ratings/create",    RatingHandler::create);
-        router.POST("/ratings/delete",    RatingHandler::delete);
+        var ratings = new RatingHandler();
+        router.GET("/ratings",         ratings::list);
+        router.POST("/ratings/create", ratings::create);
+        router.POST("/ratings/delete", ratings::delete);
 
-        // Stars
-        router.GET("/stars",              StarsHandler::list);
-        router.POST("/stars/create",      StarsHandler::create);
-        router.POST("/stars/delete",      StarsHandler::delete);
+        var stars = new StarsHandler();
+        router.GET("/stars",         stars::list);
+        router.POST("/stars/create", stars::create);
+        router.POST("/stars/delete", stars::delete);
 
-        // Roles
-        router.GET("/roles",              RoleHandler::list);
-        router.POST("/roles/create",      RoleHandler::create);
-        router.POST("/roles/delete",      RoleHandler::delete);
-        router.POST("/roles/assign",      RoleHandler::assignUser);
-        router.POST("/roles/remove-user", RoleHandler::removeUser);
-
-        SampleData.ensure();
+        var roles = new RoleHandler();
+        router.GET("/roles",              roles::list);
+        router.POST("/roles/create",      roles::create);
+        router.POST("/roles/delete",      roles::delete);
+        router.POST("/roles/assign",      roles::assignUser);
+        router.POST("/roles/remove-user", roles::removeUser);
 
         router.serve();
     }
 }
-
