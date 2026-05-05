@@ -40,25 +40,54 @@
             background: rgba(0,0,0,0.3);
             color: var(--accent-orange);
         }
+        .detail-title-name {
+            color: var(--text-main);
+        }
         .action-bar {
             margin-top: 24px;
             display: flex;
             gap: 12px;
         }
+        .detail-back-btn {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+        }
+        .detail-bio-wrap {
+            margin-top: 12px;
+            text-align: center;
+        }
+        .detail-bio-link {
+            display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .detail-edit-link {
+            background: var(--accent-orange);
+            color: white;
+            border-color: transparent;
+        }
+        .detail-edit-link:hover {
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div class="table-container">
-        <h1>{{ entityName }}: <span style="color:var(--text-main)">{{ displayedAs }}</span></h1>
-        
+        <h1>{{ entityName }}: <span class="detail-title-name">{{ displayedAs }}</span></h1>
+
         <div class="detail-card">
             <div>
-                {{ pictureHtml }}
-                <div style="margin-top: 12px; text-align: center;">
-                    {{ bioHtml }}
+                {{#if pictureUrl}}
+                <img src="{{ pictureUrl }}" class="detail-image" alt="" referrerpolicy="no-referrer">
+                {{/if}}
+                {{#if bioUrl}}
+                <div class="detail-bio-wrap">
+                    <a href="{{ bioUrl }}" target="_blank" rel="noopener noreferrer"
+                       class="table-link detail-bio-link">Read Biography ↗</a>
                 </div>
+                {{/if}}
             </div>
-            
+
             <div class="detail-info">
                 <table class="detail-table">
                     <tbody>
@@ -70,10 +99,12 @@
                         {{/each}}
                     </tbody>
                 </table>
-                
+
                 <div class="action-bar">
-                    <button onclick="window.history.back()" style="background: var(--bg-dark); border: 1px solid var(--border-color);">← Go Back</button>
-                    {{ editHtml }}
+                    <button type="button" class="detail-back-btn" onclick="window.history.back()">← Go Back</button>
+                    {{#if showArtworkEdit}}
+                    <a href="{{ artworkEditUrl }}" class="table-link detail-edit-link">✏️ Edit</a>
+                    {{/if}}
                 </div>
             </div>
         </div>
