@@ -1,261 +1,243 @@
-package Autumn.orm;
+package io.github.finch.core;
 
-import java.io.*;
-import java.lang.reflect.*;
+import io.github.finch.core.mapping.SchemaSync;
+import io.github.finch.core.pool.ConnectionPool;
+import io.github.finch.core.pool.DataSourcePool;
+import io.github.finch.core.pool.SimpleConnectionPool;
+import io.github.finch.core.query.*;
+
+import javax.sql.DataSource;
+import java.io.File;
 import java.sql.*;
 import java.util.*;
 
+/**
+ * Entry point for Finch.
+ *
+ * Initialization:
+ *   Db db = Db.configure()
+ *               .url("jdbc:sqlite:data/app.db")
+ *               .poolSize(10)
+ *               .tables(User.class, Post.class)
+ *               .connect();
+ *
+ * Annotation shortcut (reads @Database, no classpath scan):
+ *   Db db = Db.from(AppConfig.class);
+ *
+ * Query syntax:
+ *   db.SELECT.FROM(User.class).WHERE("id = ?", 1).EXEC()
+ *   db.INSERT.INTO(User.class).VALUES(user).EXEC()
+ *   db.UPDATE(User.class).SET(user).WHERE("id = ?", user.id).EXEC()
+ *   db.UPDATE(Post.class).SET(category).WHERE("id = ?", post.id).EXEC()  // FK only
+ *   db.DELETE.FROM(User.class).WHERE(user).EXEC()
+ */
 public class Db {
 
+    /** Convenience reference set automatically by connect() / Db.from(). */
     public static Db instance;
 
-    private final String url;
-    private final String user;
-    private final String password;
+    private final ConnectionPool pool;
+
+    private Db(ConnectionPool pool) {
+        this.pool = pool;
+    }
+
+    // ── Dispatchers ───────────────────────────────────────────────────────────
+
+    public final class Select {
+        public <T> SelectQuery<T> FROM(Class<T> tableClass) {
+            return new SelectQueryImpl<>(pool, tableClass);
+        }
+    }
+
+    public final class Insert {
+        public <T> InsertInto<T> INTO(Class<T> tableClass) {
+            return new InsertIntoImpl<>(pool, tableClass);
+        }
+    }
+
+    public final class Delete {
+        public <T> DeleteQuery<T> FROM(Class<T> tableClass) {
+            return new DeleteQueryImpl<>(pool, tableClass);
+        }
+    }
 
     public final Select SELECT = new Select();
-
-    private Db(String url, String user, String password) {
-        this.url      = url;
-        this.user     = user;
-        this.password = password;
-    }
-
-    public static void configure(String url) {
-        configure(url, "", "");
-    }
-
-    public static void configure(String url, String user, String password) {
-        ensureDirectories(url);
-        instance = new Db(url, user, password);
-    }
-
-    public static void init() {
-        for (String entry : System.getProperty("java.class.path").split(File.pathSeparator)) {
-            File f = new File(entry);
-            if (f.isDirectory()) scanForDatabase(f, f);
-        }
-        if (instance == null) throw new RuntimeException("No @Database annotated class found.");
-    }
-
-    private static void scanForDatabase(File root, File dir) {
-        File[] files = dir.listFiles();
-        if (files == null) return;
-        for (File f : files) {
-            if (f.isDirectory()) scanForDatabase(root, f);
-            else if (f.getName().endsWith(".class")) {
-                String name = root.toURI().relativize(f.toURI()).getPath()
-                        .replace('/', '.').replace(".class", "");
-                try {
-                    Class<?> c = Class.forName(name);
-                    if (c.isAnnotationPresent(Database.class)) {
-                        Database ann = c.getAnnotation(Database.class);
-                        configure(ann.url(), ann.user(), ann.password());
-                        instance.sync(findTableClasses().toArray(new Class[0]));
-                        return;
-                    }
-                } catch (Throwable ignored) {}
-            }
-        }
-    }
-
-    private static void ensureDirectories(String url) {
-        if (url.startsWith("jdbc:sqlite:")) {
-            String path = url.substring("jdbc:sqlite:".length());
-            File parent = new File(path).getParentFile();
-            if (parent != null) parent.mkdirs();
-        }
-    }
-
-    private static List<Class<?>> findTableClasses() {
-        List<Class<?>> found = new ArrayList<>();
-        for (String entry : System.getProperty("java.class.path").split(File.pathSeparator)) {
-            File f = new File(entry);
-            if (f.isDirectory()) scanForTables(f, f, found);
-        }
-        return found;
-    }
-
-    private static void scanForTables(File root, File dir, List<Class<?>> found) {
-        File[] files = dir.listFiles();
-        if (files == null) return;
-        for (File f : files) {
-            if (f.isDirectory()) scanForTables(root, f, found);
-            else if (f.getName().endsWith(".class")) {
-                String name = root.toURI().relativize(f.toURI()).getPath()
-                        .replace('/', '.').replace(".class", "");
-                if (name.contains("$")) continue;
-                try {
-                    Class<?> c = Class.forName(name);
-                    if (c.isAnnotationPresent(Table.class)) found.add(c);
-                } catch (Throwable ignored) {}
-            }
-        }
-    }
-
-    public void sync(Class<?>... tables) {
-        for (Class<?> t : tables) {
-            if (!t.isAnnotationPresent(Table.class))
-                throw new RuntimeException(t.getName() + " must be annotated with @Table");
-            validateTable(t);
-
-            StringBuilder sql = new StringBuilder("CREATE TABLE IF NOT EXISTS ")
-                    .append(tableName(t)).append(" (");
-
-            Field[] fields = persistentFields(t);
-            for (int i = 0; i < fields.length; i++) {
-                sql.append(fields[i].getName()).append(" ").append(columnDefinition(fields[i]));
-                if (i < fields.length - 1) sql.append(", ");
-            }
-            sql.append(")");
-
-            try (Connection conn = getConnection();
-                 Statement stmt  = conn.createStatement()) {
-                stmt.execute(sql.toString());
-            } catch (SQLException e) {
-                throw new RuntimeException("sync failed for " + t.getSimpleName(), e);
-            }
-        }
-    }
-
-    public Connection getConnection() throws SQLException {
-        Connection conn = DriverManager.getConnection(url, user, password);
-        if (url.startsWith("jdbc:sqlite:")) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.execute("PRAGMA foreign_keys = ON");
-            }
-        }
-        return conn;
-    }
-
-    static String tableName(Class<?> t) {
-        Table ann = t.getAnnotation(Table.class);
-        return ann.name().isEmpty() ? t.getSimpleName().toLowerCase() : ann.name();
-    }
-
-    static Field[] persistentFields(Class<?> tableClass) {
-        return Arrays.stream(tableClass.getDeclaredFields())
-                .filter(field -> !Modifier.isStatic(field.getModifiers()))
-                .filter(field -> !Modifier.isTransient(field.getModifiers()))
-                .filter(field -> !field.isSynthetic())
-                .toArray(Field[]::new);
-    }
-
-    static Optional<Field> idField(Class<?> tableClass) {
-        return Arrays.stream(persistentFields(tableClass))
-                .filter(field -> field.isAnnotationPresent(Id.class))
-                .findFirst();
-    }
-
-    static boolean isGeneratedId(Field field) {
-        Id id = field.getAnnotation(Id.class);
-        return id != null && id.autoIncrement();
-    }
-
-    boolean isPrimaryKeyColumn(Class<?> tableClass, String columnName) {
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("PRAGMA table_info(" + tableName(tableClass) + ")")) {
-            while (rs.next()) {
-                if (columnName.equals(rs.getString("name"))) {
-                    return rs.getInt("pk") > 0;
-                }
-            }
-            return false;
-        } catch (SQLException e) {
-            throw new RuntimeException("Primary key lookup failed for " + tableName(tableClass), e);
-        }
-    }
-
-    long nextId(Class<?> tableClass, String columnName) {
-        String sql = "SELECT COALESCE(MAX(" + columnName + "), 0) + 1 FROM " + tableName(tableClass);
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            return rs.next() ? rs.getLong(1) : 1;
-        } catch (SQLException e) {
-            throw new RuntimeException("Next id lookup failed for " + tableName(tableClass), e);
-        }
-    }
-
-    private static String columnDefinition(Field field) {
-        if (field.isAnnotationPresent(Id.class)) {
-            StringBuilder sql = new StringBuilder("INTEGER PRIMARY KEY");
-            if (isGeneratedId(field)) {
-                sql.append(" AUTOINCREMENT");
-            }
-            return sql.toString();
-        }
-
-        StringBuilder sql = new StringBuilder(sqlType(field.getType()));
-        ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
-        if (foreignKey != null) {
-            sql.append(" REFERENCES ")
-                    .append(tableName(foreignKey.table()))
-                    .append("(")
-                    .append(foreignKeyColumn(foreignKey))
-                    .append(")");
-        }
-        return sql.toString();
-    }
-
-    private static void validateTable(Class<?> tableClass) {
-        long idCount = Arrays.stream(persistentFields(tableClass))
-                .filter(field -> field.isAnnotationPresent(Id.class))
-                .count();
-        if (idCount > 1) {
-            throw new RuntimeException(tableClass.getName() + " can only have one @Id field");
-        }
-
-        for (Field field : persistentFields(tableClass)) {
-            ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
-            if (foreignKey == null) continue;
-            if (field.isAnnotationPresent(Id.class)) {
-                throw new RuntimeException(field.getName() + " cannot be both @Id and @ForeignKey");
-            }
-            if (!foreignKey.table().isAnnotationPresent(Table.class)) {
-                throw new RuntimeException(field.getName() + " references a class without @Table");
-            }
-            foreignKeyColumn(foreignKey);
-        }
-    }
-
-    private static String foreignKeyColumn(ForeignKey foreignKey) {
-        if (!foreignKey.column().isBlank()) {
-            return foreignKey.column();
-        }
-        return idField(foreignKey.table())
-                .map(Field::getName)
-                .orElseThrow(() -> new RuntimeException(
-                        foreignKey.table().getName() + " needs an @Id field for default foreign keys"));
-    }
-
-    private static String sqlType(Class<?> type) {
-        if (type == int.class     || type == Integer.class) return "INTEGER";
-        if (type == long.class    || type == Long.class)    return "BIGINT";
-        if (type == double.class  || type == Double.class)  return "DOUBLE";
-        if (type == boolean.class || type == Boolean.class) return "BOOLEAN";
-        return "TEXT";
-    }
-    public <T> Query<T> INSERT(T obj) {
-        return new Query<T>(this, Query.Mode.INSERT).withObject(obj);
-    }
-
-    public <T> Query<T> UPDATE(T obj) {
-        return new Query<T>(this, Query.Mode.UPDATE).withObject(obj);
-    }
-
+    public final Insert INSERT = new Insert();
     public final Delete DELETE = new Delete();
 
-    public class Delete {
-        public <T> Query<T> FROM(Class<T> tableClass) {
-            return new Query<T>(Db.this, Query.Mode.DELETE).FROM(tableClass);
+    /** Begins an UPDATE statement for the given entity table. */
+    public <T> UpdateSet<T> UPDATE(Class<T> tableClass) {
+        return new UpdateQueryImpl<>(pool, tableClass);
+    }
+
+    // ── Transactions ─────────────────────────────────────────────────────────
+
+    /**
+     * Begin a transaction. The returned DbTransaction holds one connection
+     * from the pool with autoCommit disabled.
+     *
+     * try-with-resources (recommended — auto-rollback on exception):
+     *   try (DbTransaction t = db.TRANSACTION()) {
+     *       t.UPDATE(Account.class).SET(a).WHERE("id = ?", id).EXEC();
+     *       t.COMMIT();
+     *   }
+     *
+     * Manual:
+     *   DbTransaction t = db.TRANSACTION();
+     *   t.INSERT.INTO(Post.class).VALUES(post).EXEC();
+     *   t.COMMIT();  // or t.ROLLBACK()
+     */
+    public DbTransaction TRANSACTION() {
+        try {
+            return new DbTransaction(pool.borrow(), pool);
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to begin transaction", e);
         }
     }
 
-    public class Select {
-        public <T> Query<T> FROM(Class<T> tableClass) {
-            return new Query<T>(Db.this, Query.Mode.SELECT).FROM(tableClass);
+    // ── Raw SQL ───────────────────────────────────────────────────────────────
+
+    /**
+     * Execute arbitrary SQL with positional parameters.
+     * Returns rows as a list of column-name → value maps for SELECT statements.
+     * Returns an empty list for INSERT / UPDATE / DELETE.
+     *
+     *   db.EXEC("SELECT * FROM user WHERE id = ?", List.of(1))
+     *   db.EXEC("DELETE FROM session WHERE expires_at < ?", List.of(cutoff))
+     */
+    /**
+     * Executes arbitrary SQL with positional parameters.
+     * Returns rows as column-name → value maps for SELECT; empty list for DML.
+     */
+    public List<Map<String, Object>> EXEC(String sql, List<Object> params) {
+        Connection conn = null;
+        try {
+            conn = pool.borrow();
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                if (params != null) {
+                    for (int i = 0; i < params.size(); i++)
+                        ps.setObject(i + 1, params.get(i));
+                }
+                List<Map<String, Object>> rows = new ArrayList<>();
+                if (ps.execute()) {
+                    try (ResultSet rs = ps.getResultSet()) {
+                        ResultSetMetaData meta = rs.getMetaData();
+                        int cols = meta.getColumnCount();
+                        while (rs.next()) {
+                            Map<String, Object> row = new LinkedHashMap<>();
+                            for (int i = 1; i <= cols; i++)
+                                row.put(meta.getColumnName(i), rs.getObject(i));
+                            rows.add(row);
+                        }
+                    }
+                }
+                return rows;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("EXEC failed: " + sql, e);
+        } finally {
+            if (conn != null) pool.release(conn);
+        }
+    }
+
+    // ── Schema ────────────────────────────────────────────────────────────────
+
+    /**
+     * Creates missing tables and migrates existing ones (adds new columns).
+     * Columns removed from entities are left untouched to prevent data loss.
+     * Junction tables for {@code @ManyToMany} relationships are created automatically.
+     */
+    public Db sync(Class<?>... tables) {
+        SchemaSync.sync(pool, tables);
+        return this;
+    }
+
+    /**
+     * Returns the full CREATE TABLE DDL for the given entity classes as a SQL string.
+     * Types are selected for the active database dialect (e.g. {@code SERIAL} on
+     * PostgreSQL, {@code INTEGER PRIMARY KEY} on SQLite). Junction tables for
+     * {@code @ManyToMany} relationships are included and deduplicated.
+     *
+     *   String ddl = db.exportSchema(User.class, Post.class, Tag.class);
+     */
+    public String exportSchema(Class<?>... tables) {
+        return SchemaSync.exportSchema(pool, tables);
+    }
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    /** Closes the connection pool and releases all held connections. */
+    public void close() {
+        pool.close();
+    }
+
+    // ── Initialization ────────────────────────────────────────────────────────
+
+    /** Returns a builder for configuring and creating a {@link Db} instance. */
+    public static DbConfig configure() {
+        return new DbConfig();
+    }
+
+    /** Reads connection info from a @Database-annotated class. No classpath scanning. */
+    public static Db from(Class<?> configClass) {
+        if (!configClass.isAnnotationPresent(Database.class))
+            throw new RuntimeException(configClass.getName() + " must be annotated with @Database");
+        Database ann = configClass.getAnnotation(Database.class);
+        return configure()
+                .url(ann.url())
+                .user(ann.user())
+                .password(ann.password())
+                .connect();
+    }
+
+    // ── Config builder ────────────────────────────────────────────────────────
+
+    /** Fluent builder returned by {@link Db#configure()}. */
+    public static final class DbConfig {
+
+        private String     url      = "";
+        private String     user     = "";
+        private String     password = "";
+        private int        poolSize = 10;
+        private DataSource dataSource;
+        private Class<?>[] tables   = new Class[0];
+
+        /** Sets the JDBC connection URL. */
+        public DbConfig url(String url)           { this.url        = url; return this; }
+        /** Sets the database username. */
+        public DbConfig user(String user)         { this.user       = user; return this; }
+        /** Sets the database password. */
+        public DbConfig password(String pw)       { this.password   = pw;  return this; }
+        /** Sets the maximum connection pool size (default 10). */
+        public DbConfig poolSize(int n)           { this.poolSize   = n;   return this; }
+        /** Supplies an external {@link DataSource} (e.g. HikariCP). Overrides url/user/password/poolSize. */
+        public DbConfig dataSource(DataSource ds) { this.dataSource = ds;  return this; }
+        /** Registers entity classes and runs schema sync on {@link #connect()}. */
+        public DbConfig tables(Class<?>... cls)   { this.tables     = cls; return this; }
+
+        /** Builds the {@link Db} instance, initialises the pool, and syncs any registered tables. */
+        public Db connect() {
+            ensureDirectories(url);
+            ConnectionPool cp;
+            try {
+                cp = dataSource != null
+                        ? new DataSourcePool(dataSource)
+                        : new SimpleConnectionPool(url, user, password, poolSize);
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to initialise connection pool", e);
+            }
+            Db db = new Db(cp);
+            if (tables.length > 0) db.sync(tables);
+            instance = db;
+            return db;
+        }
+
+        private static void ensureDirectories(String url) {
+            if (url.startsWith("jdbc:sqlite:")) {
+                File parent = new File(url.substring("jdbc:sqlite:".length())).getParentFile();
+                if (parent != null) parent.mkdirs();
+            }
         }
     }
 }
