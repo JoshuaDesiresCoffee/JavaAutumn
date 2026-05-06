@@ -3,6 +3,7 @@ package Implementation;
 import Autumn.Router;
 import Autumn.handler.BaseHandler;
 import Autumn.handler.StaticAssetHandler;
+import Autumn.orm.Db;
 import Implementation.handler.*;
 import Implementation.repository.Artist;
 import Implementation.repository.Artwork;
@@ -18,6 +19,8 @@ public class App {
     public static final int PORT = 8080;
 
     public static void main(String[] args) {
+
+        Db.from(AppConfig.class).sync(SeedDatabase.TABLES);
 
         var router = new Router(PORT);
 

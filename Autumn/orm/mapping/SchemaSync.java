@@ -1,8 +1,8 @@
-package io.github.finch.core.mapping;
+package Autumn.orm.mapping;
 
-import io.github.finch.core.Table;
-import io.github.finch.core.annotations.Column;
-import io.github.finch.core.pool.ConnectionPool;
+import Autumn.orm.Table;
+import Autumn.orm.annotations.Column;
+import Autumn.orm.pool.ConnectionPool;
 
 import java.sql.*;
 import java.util.*;

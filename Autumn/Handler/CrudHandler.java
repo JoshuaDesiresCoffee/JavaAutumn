@@ -66,7 +66,7 @@ public abstract class CrudHandler<T> {
                 exchange.send(400, error);
                 return;
             }
-            Db.instance.INSERT(entity).EXEC();
+            Db.instance.INSERT.INTO(entityClass).VALUES(entity).EXEC();
             exchange.redirect(routePrefix);
         } catch (Exception e) {
             exchange.send(500, "Failed to create " + entityClass.getSimpleName() + ": " + e.getMessage());
@@ -86,7 +86,7 @@ public abstract class CrudHandler<T> {
                 exchange.send(400, error);
                 return;
             }
-            Db.instance.UPDATE(entity).BY_ID(idOpt.get()).EXEC();
+            Db.instance.UPDATE(entityClass).SET(entity).WHERE("id = ?", idOpt.get()).EXEC();
             exchange.redirect(routePrefix);
         } catch (Exception e) {
             exchange.send(500, "Failed to update " + entityClass.getSimpleName() + ": " + e.getMessage());
@@ -100,7 +100,7 @@ public abstract class CrudHandler<T> {
             return;
         }
         try {
-            Db.instance.DELETE.FROM(entityClass).BY_ID(idOpt.get()).EXEC();
+            Db.instance.DELETE.FROM(entityClass).WHERE("id = ?", idOpt.get()).EXEC();
             exchange.redirect(routePrefix);
         } catch (Exception e) {
             BaseHandler.renderDeleteError(exchange, e);

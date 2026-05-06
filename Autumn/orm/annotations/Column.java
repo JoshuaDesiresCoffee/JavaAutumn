@@ -1,4 +1,4 @@
-package io.github.finch.core.annotations;
+package Autumn.orm.annotations;
 
 import java.lang.annotation.*;
 

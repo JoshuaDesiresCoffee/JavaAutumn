@@ -1,7 +1,6 @@
 package Implementation.repository;
 
-import Autumn.orm.ForeignKey;
-import Autumn.orm.Id;
+import Autumn.orm.annotations.Id;
 import Autumn.orm.Table;
 
 @Table
@@ -11,8 +10,6 @@ public class Artwork {
     public String displayedAs;
     public String material;
     public String pictureUrl;
-    @ForeignKey(table = Artist.class)
     public int artistId;
-    @ForeignKey(table = Provenance.class)
     public int provenanceId;
 }

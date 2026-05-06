@@ -1,4 +1,4 @@
-package io.github.finch.core.query;
+package Autumn.orm.query;
 
 public interface UpdateQuery<T> {
     /** Merges additional fields from {@code obj} into the SET clause (e.g. a related FK object). */

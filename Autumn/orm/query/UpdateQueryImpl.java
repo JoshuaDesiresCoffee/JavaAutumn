@@ -1,9 +1,9 @@
-package io.github.finch.core.query;
+package Autumn.orm.query;
 
-import io.github.finch.core.Table;
-import io.github.finch.core.mapping.EntityMapper;
-import io.github.finch.core.mapping.EntityMapper.FieldInfo;
-import io.github.finch.core.pool.ConnectionPool;
+import Autumn.orm.Table;
+import Autumn.orm.mapping.EntityMapper;
+import Autumn.orm.mapping.EntityMapper.FieldInfo;
+import Autumn.orm.pool.ConnectionPool;
 
 import java.sql.*;
 import java.util.ArrayList;

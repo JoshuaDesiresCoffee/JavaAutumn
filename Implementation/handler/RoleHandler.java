@@ -90,7 +90,7 @@ public class RoleHandler extends CrudHandler<Role> {
             UserRole ur = new UserRole();
             ur.userId = userId;
             ur.roleId = roleId;
-            Db.instance.INSERT(ur).EXEC();
+            Db.instance.INSERT.INTO(UserRole.class).VALUES(ur).EXEC();
             exchange.redirect(routePrefix);
         } catch (Exception e) {
             exchange.send(500, "Failed to assign role: " + e.getMessage());
@@ -104,7 +104,7 @@ public class RoleHandler extends CrudHandler<Role> {
             return;
         }
         try {
-            Db.instance.DELETE.FROM(UserRole.class).BY_ID(idOpt.get()).EXEC();
+            Db.instance.DELETE.FROM(UserRole.class).WHERE("id = ?", idOpt.get()).EXEC();
             exchange.redirect(routePrefix);
         } catch (Exception e) {
             exchange.send(500, e.getMessage());

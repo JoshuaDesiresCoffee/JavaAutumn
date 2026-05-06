@@ -1,8 +1,8 @@
-package io.github.finch.core;
+package Autumn.orm;
 
-import io.github.finch.core.pool.ConnectionPool;
-import io.github.finch.core.pool.SingleConnectionPool;
-import io.github.finch.core.query.*;
+import Autumn.orm.pool.ConnectionPool;
+import Autumn.orm.pool.SingleConnectionPool;
+import Autumn.orm.query.*;
 
 import java.sql.*;
 import java.util.*;

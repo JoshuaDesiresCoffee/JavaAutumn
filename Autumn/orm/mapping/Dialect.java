@@ -1,4 +1,4 @@
-package io.github.finch.core.mapping;
+package Autumn.orm.mapping;
 
 import java.math.BigDecimal;
 import java.sql.Connection;

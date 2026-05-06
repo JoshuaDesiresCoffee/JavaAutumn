@@ -1,4 +1,4 @@
-package io.github.finch.core.pool;
+package Autumn.orm.pool;
 
 import java.sql.Connection;
 import java.sql.SQLException;

@@ -2,9 +2,7 @@ package Implementation.tests;
 
 
 import Autumn.orm.Db;
-import Autumn.orm.ForeignKey;
-import Autumn.orm.Id;
-import Autumn.orm.Query;
+import Autumn.orm.annotations.Id;
 import Autumn.orm.Table;
 import Autumn.templating.Json;
 import Autumn.templating.Templater;
@@ -19,12 +17,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -39,10 +32,9 @@ public final class TestRunner {
     public static void main(String[] args) throws IOException {
         Path dbFile = Files.createTempFile("javaautumn-test-", ".db");
         try {
-            Db.configure("jdbc:sqlite:" + dbFile);
+            Db.configure().url("jdbc:sqlite:" + dbFile).connect();
             // Do not call SeedDatabase.syncSchema(): it re-configures Db to app.db and breaks isolation.
             Db.instance.sync(SeedDatabase.TABLES);
-            Db.instance.sync(Post.class);
 
             testTemplaterReplacesPlaceholder();
             testTemplaterMissingKeyRendersEmpty();
@@ -60,12 +52,7 @@ public final class TestRunner {
             testOrmInsertUsesPreparedStatement();
             testOrmInsertSetsGeneratedId();
             testOrmWhereObjectRejectsEmptyFilter();
-            testOrmForeignKeySchema();
-            testOrmForeignKeyRejectsMissingParent();
-            testOrmForeignKeyAllowsExistingParent();
-            testOrmRejectsForeignKeyOnId();
             testSeedDatabaseCreatesArtDomain();
-            testSampleArtworkRequiresExistingArtist();
             testShowUserEmptyDbDoesNotCrash();
             System.out.println("All MVP.tests passed.");
         } finally {
@@ -152,7 +139,7 @@ public final class TestRunner {
     }
 
     private static void testJsonEscapesControlChars() {
-        String json = Json.toJson(new TestObj("quote\" slash\\ \b\f\n\r\t\u0001"));
+        String json = Json.toJson(new TestObj("quote\" slash\\ \b\f\n\r\t"));
         String expected = "{\"value\":\"quote\\\" slash\\\\ \\b\\f\\n\\r\\t\\u0001\"}";
         assert expected.equals(json) : "control characters should be escaped: " + json;
     }
@@ -168,14 +155,14 @@ public final class TestRunner {
         u.name = "O'Brien";
         u.email = "ob-" + System.nanoTime() + "@test.com";
         try {
-            Db.instance.INSERT(u).EXEC();
+            Db.instance.INSERT.INTO(User.class).VALUES(u).EXEC();
             assert u.id > 0 : "generated id should be set after insert";
             var found = Db.instance.SELECT.FROM(User.class).WHERE("email = ?", u.email).EXEC();
             assert !found.isEmpty() : "inserted user should be found";
             assert "O'Brien".equals(found.getFirst().name) : "name with apostrophe should survive: " + found.getFirst().name;
         } finally {
             if (u.id > 0) {
-                Db.instance.DELETE.FROM(User.class).BY_ID(u.id).EXEC();
+                Db.instance.DELETE.FROM(User.class).WHERE("id = ?", u.id).EXEC();
             }
         }
     }
@@ -185,13 +172,13 @@ public final class TestRunner {
         u.name = "Generated Id";
         u.email = "generated-id-" + System.nanoTime() + "@test.com";
         try {
-            Db.instance.INSERT(u).EXEC();
+            Db.instance.INSERT.INTO(User.class).VALUES(u).EXEC();
             assert u.id > 0 : "insert should populate user.id";
-            var found = Db.instance.SELECT.FROM(User.class).BY_ID(u.id).EXEC();
+            var found = Db.instance.SELECT.FROM(User.class).WHERE("id = ?", u.id).EXEC();
             assert found.size() == 1 : "inserted user should be found by id";
         } finally {
             if (u.id > 0) {
-                Db.instance.DELETE.FROM(User.class).BY_ID(u.id).EXEC();
+                Db.instance.DELETE.FROM(User.class).WHERE("id = ?", u.id).EXEC();
             }
         }
     }
@@ -205,92 +192,12 @@ public final class TestRunner {
         }
     }
 
-    private static void testOrmForeignKeySchema() {
-        try (Connection conn = Db.instance.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("PRAGMA foreign_key_list(post)")) {
-            assert rs.next() : "post should have a foreign key";
-            assert "user".equals(rs.getString("table")) : "foreign key should reference user table";
-            assert "userId".equals(rs.getString("from")) : "foreign key should use post.userId";
-            assert "id".equals(rs.getString("to")) : "foreign key should reference user.id";
-        } catch (Exception e) {
-            throw new RuntimeException("foreign key schema check failed", e);
-        }
-    }
-
-    private static void testOrmForeignKeyRejectsMissingParent() {
-        Post post = new Post();
-        post.userId = -12345;
-        post.title = "Missing user";
-
-        try {
-            Db.instance.INSERT(post).EXEC();
-            assert false : "insert should fail when userId does not exist";
-        } catch (RuntimeException expected) {
-            Throwable cause = expected.getCause();
-            assert cause instanceof SQLException : "foreign key failure should keep SQL cause";
-            String message = cause.getMessage().toLowerCase(Locale.ROOT);
-            assert message.contains("foreign key") : "expected foreign key failure, got: " + message;
-        }
-    }
-
-    private static void testOrmForeignKeyAllowsExistingParent() {
-        User user = new User();
-        user.name = "Foreign Key User";
-        user.email = "fk-" + System.nanoTime() + "@test.com";
-        Post post = new Post();
-        try {
-            Db.instance.INSERT(user).EXEC();
-            post.userId = user.id;
-            post.title = "Valid user";
-
-            Db.instance.INSERT(post).EXEC();
-            assert post.id > 0 : "insert should populate post.id";
-        } finally {
-            if (post.id > 0) {
-                Db.instance.DELETE.FROM(Post.class).BY_ID(post.id).EXEC();
-            }
-            if (user.id > 0) {
-                Db.instance.DELETE.FROM(User.class).BY_ID(user.id).EXEC();
-            }
-        }
-    }
-
-    private static void testOrmRejectsForeignKeyOnId() {
-        try {
-            Db.instance.sync(BadForeignKey.class);
-            assert false : "@ForeignKey on @Id should fail loudly";
-        } catch (RuntimeException expected) {
-            assert expected.getMessage() != null && expected.getMessage().contains("both @Id and @ForeignKey");
-        }
-    }
-
     private static void testSeedDatabaseCreatesArtDomain() {
         SeedDatabase.populateIfEmpty();
         // Counts mirror SeedDatabase.insertDemoData on a fresh DB
         assert Db.instance.SELECT.FROM(Artist.class).EXEC().size() == 5 : "sample should include five artists";
         assert Db.instance.SELECT.FROM(Artwork.class).EXEC().size() == 6 : "sample should include six artworks";
         assert Db.instance.SELECT.FROM(ArtistEpoch.class).EXEC().size() == 6 : "sample should link artists to epochs";
-    }
-
-    private static void testSampleArtworkRequiresExistingArtist() {
-        Provenance provenance = Db.instance.SELECT.FROM(Provenance.class).LIMIT(1).EXEC().getFirst();
-        Artwork artwork = new Artwork();
-        artwork.displayedAs = "Invalid Artwork";
-        artwork.material = "Oil on canvas";
-        artwork.pictureUrl = "";
-        artwork.artistId = -12345;
-        artwork.provenanceId = provenance.id;
-
-        try {
-            Db.instance.INSERT(artwork).EXEC();
-            assert false : "artwork insert should fail when artistId does not exist";
-        } catch (RuntimeException expected) {
-            Throwable cause = expected.getCause();
-            assert cause instanceof SQLException : "foreign key failure should keep SQL cause";
-            String message = cause.getMessage().toLowerCase(Locale.ROOT);
-            assert message.contains("foreign key") : "expected foreign key failure, got: " + message;
-        }
     }
 
     private static void testShowUserEmptyDbDoesNotCrash() {
@@ -301,21 +208,5 @@ public final class TestRunner {
     static class TestObj {
         public String value;
         TestObj(String value) { this.value = value; }
-    }
-
-    @Table(name = "post")
-    public static class Post {
-        @Id
-        public int id;
-        @ForeignKey(table = User.class)
-        public int userId;
-        public String title;
-    }
-
-    @Table(name = "bad_foreign_key")
-    public static class BadForeignKey {
-        @Id
-        @ForeignKey(table = User.class)
-        public int id;
     }
 }

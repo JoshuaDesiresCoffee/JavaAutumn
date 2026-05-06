@@ -1,7 +1,7 @@
-package io.github.finch.core.mapping;
+package Autumn.orm.mapping;
 
-import io.github.finch.core.Table;
-import io.github.finch.core.annotations.*;
+import Autumn.orm.Table;
+import Autumn.orm.annotations.*;
 
 import java.lang.reflect.*;
 import java.math.BigDecimal;

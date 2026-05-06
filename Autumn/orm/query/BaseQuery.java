@@ -1,8 +1,8 @@
-package io.github.finch.core.query;
+package Autumn.orm.query;
 
-import io.github.finch.core.mapping.EntityMapper;
-import io.github.finch.core.mapping.EntityMapper.FieldInfo;
-import io.github.finch.core.pool.ConnectionPool;
+import Autumn.orm.mapping.EntityMapper;
+import Autumn.orm.mapping.EntityMapper.FieldInfo;
+import Autumn.orm.pool.ConnectionPool;
 
 import java.sql.*;
 import java.time.*;
@@ -38,7 +38,7 @@ abstract class BaseQuery<T> {
         this.whereParams   = null;
     }
 
-    // Builds a parameterized WHERE from an object's non-null fields.
+    // Builds a parameterized WHERE from an object's non-null, non-default fields.
     protected void setWhereFromObject(Object o) {
         List<FieldInfo> fields = EntityMapper.getFields(o.getClass());
         StringJoiner template = new StringJoiner(" AND ");
@@ -48,6 +48,11 @@ abstract class BaseQuery<T> {
             try {
                 Object val = fi.field.get(o);
                 if (val == null) continue;
+                // Skip primitive defaults (0, false) — they signal "not set"
+                if (fi.field.getType().isPrimitive()) {
+                    if (val instanceof Number && ((Number) val).longValue() == 0L) continue;
+                    if (val instanceof Boolean && !(Boolean) val) continue;
+                }
                 template.add(fi.columnName + " = ?");
                 if (fi.isForeignKey) {
                     FieldInfo relId = EntityMapper.getIdField(fi.relatedType);
@@ -57,6 +62,9 @@ abstract class BaseQuery<T> {
                 }
             } catch (IllegalAccessException e) { throw new RuntimeException(e); }
         }
+        if (params.isEmpty())
+            throw new RuntimeException(
+                "WHERE(object) filter has no values — all fields are null or default");
         this.whereTemplate = template.toString();
         this.whereParams   = params.toArray();
         this.whereRawSql   = null;

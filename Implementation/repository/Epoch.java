@@ -1,6 +1,6 @@
 package Implementation.repository;
 
-import Autumn.orm.Id;
+import Autumn.orm.annotations.Id;
 import Autumn.orm.Table;
 
 @Table

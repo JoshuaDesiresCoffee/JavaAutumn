@@ -2,7 +2,6 @@ package Autumn;
 
 import Autumn.handler.Exchange;
 import Autumn.handler.Handler;
-import Autumn.orm.Db;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
@@ -23,7 +22,6 @@ public class Router {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        Db.init();
     }
 
     public void handle(String method, String path, HttpHandler handler) {

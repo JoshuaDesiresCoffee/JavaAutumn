@@ -1,10 +1,10 @@
-package io.github.finch.core;
+package Autumn.orm;
 
-import io.github.finch.core.mapping.SchemaSync;
-import io.github.finch.core.pool.ConnectionPool;
-import io.github.finch.core.pool.DataSourcePool;
-import io.github.finch.core.pool.SimpleConnectionPool;
-import io.github.finch.core.query.*;
+import Autumn.orm.mapping.SchemaSync;
+import Autumn.orm.pool.ConnectionPool;
+import Autumn.orm.pool.DataSourcePool;
+import Autumn.orm.pool.SimpleConnectionPool;
+import Autumn.orm.query.*;
 
 import javax.sql.DataSource;
 import java.io.File;

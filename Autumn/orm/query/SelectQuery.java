@@ -1,4 +1,4 @@
-package io.github.finch.core.query;
+package Autumn.orm.query;
 
 import java.util.List;
 

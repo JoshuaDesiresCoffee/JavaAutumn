@@ -1,6 +1,6 @@
-package io.github.finch.core.query;
+package Autumn.orm.query;
 
-import io.github.finch.core.pool.ConnectionPool;
+import Autumn.orm.pool.ConnectionPool;
 
 public class InsertIntoImpl<T> implements InsertInto<T> {
 

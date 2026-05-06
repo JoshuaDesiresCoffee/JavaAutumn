@@ -1,4 +1,4 @@
-package io.github.finch.core.query;
+package Autumn.orm.query;
 
 public interface InsertQuery<T> {
     /** Executes the INSERT statement. */

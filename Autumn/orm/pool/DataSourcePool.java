@@ -1,4 +1,4 @@
-package io.github.finch.core.pool;
+package Autumn.orm.pool;
 
 import javax.sql.DataSource;
 import java.sql.*;

@@ -1,8 +1,8 @@
-package io.github.finch.core.query;
+package Autumn.orm.query;
 
-import io.github.finch.core.mapping.EntityMapper;
-import io.github.finch.core.mapping.EntityMapper.FieldInfo;
-import io.github.finch.core.pool.ConnectionPool;
+import Autumn.orm.mapping.EntityMapper;
+import Autumn.orm.mapping.EntityMapper.FieldInfo;
+import Autumn.orm.pool.ConnectionPool;
 
 import java.sql.*;
 import java.util.*;
@@ -26,12 +26,16 @@ public class InsertQueryImpl<T> extends BaseQuery<T> implements InsertQuery<T> {
 
         for (FieldInfo fi : fields) {
             if (fi.columnName == null) continue; // skip relation-only fields
-            cols.add(fi.columnName);
-            placeholders.add("?");
             try {
                 Object val = fi.field.get(object);
+                // Skip id when 0/null — let the DB auto-generate it
+                if (fi.isId) {
+                    if (val == null) continue;
+                    if (val instanceof Number && ((Number) val).longValue() == 0L) continue;
+                }
+                cols.add(fi.columnName);
+                placeholders.add("?");
                 if (fi.isForeignKey && val != null) {
-                    // Store the related entity's id, not the object itself
                     FieldInfo relId = EntityMapper.getIdField(fi.relatedType);
                     values.add(relId.field.get(val));
                 } else {
@@ -46,9 +50,17 @@ public class InsertQueryImpl<T> extends BaseQuery<T> implements InsertQuery<T> {
         Connection conn = null;
         try {
             conn = pool.borrow();
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 for (int i = 0; i < values.size(); i++) ps.setObject(i + 1, toJdbcValue(values.get(i)));
                 ps.executeUpdate();
+                try (ResultSet keys = ps.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        FieldInfo idField = EntityMapper.getIdField(tableClass);
+                        try {
+                            idField.field.set(object, SelectQueryImpl.coerce(keys.getObject(1), idField.field.getType()));
+                        } catch (IllegalAccessException e) { throw new RuntimeException(e); }
+                    }
+                }
             }
         } catch (SQLException e) {
             throw new RuntimeException("INSERT failed [" + tableClass.getSimpleName() + "]: " + sql + " values=" + values, e);

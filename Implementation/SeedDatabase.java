@@ -51,8 +51,7 @@ public final class SeedDatabase {
 
     /** CREATE TABLE for all {@link #TABLES} entities. */
     public static void syncSchema() {
-        Db.configure(DATABASE_URL);
-        Db.instance.sync(TABLES);
+        Db.configure().url(DATABASE_URL).tables(TABLES).connect();
     }
 
     /** Deletes the SQLite file. Next {@link #syncSchema()} recreates empty tables. */
@@ -85,48 +84,48 @@ public final class SeedDatabase {
             Stars s = new Stars();
             s.value = i + 1;
             s.displayedAs = symbols[i];
-            Db.instance.INSERT(s).EXEC();
+            Db.instance.INSERT.INTO(Stars.class).VALUES(s).EXEC();
             starsArr[i] = s;
         }
 
         // ── Roles ─────────────────────────────────────────────────────────
         Role guest = new Role();
         guest.displayedAs = "GUEST";
-        Db.instance.INSERT(guest).EXEC();
+        Db.instance.INSERT.INTO(Role.class).VALUES(guest).EXEC();
         Role auth = new Role();
         auth.displayedAs = "AUTH";
-        Db.instance.INSERT(auth).EXEC();
+        Db.instance.INSERT.INTO(Role.class).VALUES(auth).EXEC();
         Role admin = new Role();
         admin.displayedAs = "ADMIN";
-        Db.instance.INSERT(admin).EXEC();
+        Db.instance.INSERT.INTO(Role.class).VALUES(admin).EXEC();
 
         // ── Users ─────────────────────────────────────────────────────────
         User freddy = new User();
         freddy.name = "Freddy Mercury";
         freddy.email = "freddy@example.test";
-        Db.instance.INSERT(freddy).EXEC();
+        Db.instance.INSERT.INTO(User.class).VALUES(freddy).EXEC();
         User udo = new User();
         udo.name = "Udo Lindenberg";
         udo.email = "udo@example.test";
-        Db.instance.INSERT(udo).EXEC();
+        Db.instance.INSERT.INTO(User.class).VALUES(udo).EXEC();
         User alex = new User();
         alex.name = "Alexander Frege";
         alex.email = "alex@example.test";
-        Db.instance.INSERT(alex).EXEC();
+        Db.instance.INSERT.INTO(User.class).VALUES(alex).EXEC();
 
         // ── UserRoles ─────────────────────────────────────────────────────
         UserRole ur1 = new UserRole();
         ur1.userId = freddy.id;
         ur1.roleId = guest.id;
-        Db.instance.INSERT(ur1).EXEC();
+        Db.instance.INSERT.INTO(UserRole.class).VALUES(ur1).EXEC();
         UserRole ur2 = new UserRole();
         ur2.userId = udo.id;
         ur2.roleId = auth.id;
-        Db.instance.INSERT(ur2).EXEC();
+        Db.instance.INSERT.INTO(UserRole.class).VALUES(ur2).EXEC();
         UserRole ur3 = new UserRole();
         ur3.userId = alex.id;
         ur3.roleId = admin.id;
-        Db.instance.INSERT(ur3).EXEC();
+        Db.instance.INSERT.INTO(UserRole.class).VALUES(ur3).EXEC();
 
         // ── Provenances ───────────────────────────────────────────────────
         Provenance louvre = prov("Louvre");
@@ -202,27 +201,27 @@ public final class SeedDatabase {
         r1.artworkId = birthOfVenus.id;
         r1.starsId = starsArr[4].id;
         r1.userId = udo.id;
-        Db.instance.INSERT(r1).EXEC();
+        Db.instance.INSERT.INTO(Rating.class).VALUES(r1).EXEC();
 
         Rating r2 = new Rating();
         r2.displayedAs = "second rating";
         r2.artworkId = monaLisa.id;
         r2.starsId = starsArr[3].id;
         r2.userId = freddy.id;
-        Db.instance.INSERT(r2).EXEC();
+        Db.instance.INSERT.INTO(Rating.class).VALUES(r2).EXEC();
     }
 
     private static Provenance prov(String name) {
         Provenance p = new Provenance();
         p.displayedAs = name;
-        Db.instance.INSERT(p).EXEC();
+        Db.instance.INSERT.INTO(Provenance.class).VALUES(p).EXEC();
         return p;
     }
 
     private static Epoch epoch(String name) {
         Epoch e = new Epoch();
         e.displayedAs = name;
-        Db.instance.INSERT(e).EXEC();
+        Db.instance.INSERT.INTO(Epoch.class).VALUES(e).EXEC();
         return e;
     }
 
@@ -236,7 +235,7 @@ public final class SeedDatabase {
         a.deathDate = death;
         a.bioUrl = bioUrl;
         a.pictureUrl = pictureUrl;
-        Db.instance.INSERT(a).EXEC();
+        Db.instance.INSERT.INTO(Artist.class).VALUES(a).EXEC();
         return a;
     }
 
@@ -248,7 +247,7 @@ public final class SeedDatabase {
         a.pictureUrl = pictureUrl;
         a.artistId = artistId;
         a.provenanceId = provenanceId;
-        Db.instance.INSERT(a).EXEC();
+        Db.instance.INSERT.INTO(Artwork.class).VALUES(a).EXEC();
         return a;
     }
 
@@ -256,6 +255,6 @@ public final class SeedDatabase {
         ArtistEpoch ae = new ArtistEpoch();
         ae.artistId = artistId;
         ae.epochId = epochId;
-        Db.instance.INSERT(ae).EXEC();
+        Db.instance.INSERT.INTO(ArtistEpoch.class).VALUES(ae).EXEC();
     }
 }

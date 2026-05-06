@@ -1,4 +1,4 @@
-package io.github.finch.core.query;
+package Autumn.orm.query;
 
 public interface DeleteQuery<T> {
     /** Adds a WHERE clause with {@code ?} positional parameters. */
