@@ -114,18 +114,9 @@ public final class SeedDatabase {
         Db.instance.INSERT.INTO(User.class).VALUES(alex).EXEC();
 
         // ── UserRoles ─────────────────────────────────────────────────────
-        UserRole ur1 = new UserRole();
-        ur1.userId = freddy.id;
-        ur1.roleId = guest.id;
-        Db.instance.INSERT.INTO(UserRole.class).VALUES(ur1).EXEC();
-        UserRole ur2 = new UserRole();
-        ur2.userId = udo.id;
-        ur2.roleId = auth.id;
-        Db.instance.INSERT.INTO(UserRole.class).VALUES(ur2).EXEC();
-        UserRole ur3 = new UserRole();
-        ur3.userId = alex.id;
-        ur3.roleId = admin.id;
-        Db.instance.INSERT.INTO(UserRole.class).VALUES(ur3).EXEC();
+        userRole(freddy, guest);
+        userRole(udo, auth);
+        userRole(alex, admin);
 
         // ── Provenances ───────────────────────────────────────────────────
         Provenance louvre = prov("Louvre");
@@ -172,43 +163,32 @@ public final class SeedDatabase {
                 "");
 
         // ── ArtistEpochs ──────────────────────────────────────────────────
-        artistEpoch(botticelli.id, gothic.id);
-        artistEpoch(botticelli.id, renaissance.id);
-        artistEpoch(leonardo.id, renaissance.id);
-        artistEpoch(velazquez.id, baroque.id);
-        artistEpoch(rembrandt.id, baroque.id);
-        artistEpoch(caravaggio.id, baroque.id);
+        artistEpoch(botticelli, gothic);
+        artistEpoch(botticelli, renaissance);
+        artistEpoch(leonardo, renaissance);
+        artistEpoch(velazquez, baroque);
+        artistEpoch(rembrandt, baroque);
+        artistEpoch(caravaggio, baroque);
 
         // ── Artworks ──────────────────────────────────────────────────────
         Artwork birthOfVenus = artwork("Birth of Venus", "Tempera on canvas",
                 "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Sandro_Botticelli_046.jpg/800px-Sandro_Botticelli_046.jpg",
-                botticelli.id, louvre.id);
+                botticelli, louvre);
         Artwork monaLisa = artwork("Mona Lisa", "Oil on poplar wood",
                 "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
-                leonardo.id, louvre.id);
+                leonardo, louvre);
         artwork("Primavera", "Oil on Canvas",
-                "https://etsy.com/...primavera", botticelli.id, albertina.id);
+                "https://etsy.com/...primavera", botticelli, albertina);
         artwork("Las Meninas", "Oil on canvas",
-                "", velazquez.id, landesmus.id);
+                "", velazquez, landesmus);
         artwork("The Night's Watch", "Oil on canvas",
-                "", rembrandt.id, landesmus.id);
+                "", rembrandt, landesmus);
         artwork("Mary Magdalene", "Oil on canvas",
-                "", caravaggio.id, musee.id);
+                "", caravaggio, musee);
 
         // ── Ratings ───────────────────────────────────────────────────────
-        Rating r1 = new Rating();
-        r1.displayedAs = "first rating";
-        r1.artworkId = birthOfVenus.id;
-        r1.starsId = starsArr[4].id;
-        r1.userId = udo.id;
-        Db.instance.INSERT.INTO(Rating.class).VALUES(r1).EXEC();
-
-        Rating r2 = new Rating();
-        r2.displayedAs = "second rating";
-        r2.artworkId = monaLisa.id;
-        r2.starsId = starsArr[3].id;
-        r2.userId = freddy.id;
-        Db.instance.INSERT.INTO(Rating.class).VALUES(r2).EXEC();
+        rating("first rating",  birthOfVenus, starsArr[4], udo);
+        rating("second rating", monaLisa,     starsArr[3], freddy);
     }
 
     private static Provenance prov(String name) {
@@ -240,21 +220,37 @@ public final class SeedDatabase {
     }
 
     private static Artwork artwork(String title, String material,
-                                   String pictureUrl, int artistId, int provenanceId) {
+                                   String pictureUrl, Artist artist, Provenance provenance) {
         Artwork a = new Artwork();
         a.displayedAs = title;
         a.material = material;
         a.pictureUrl = pictureUrl;
-        a.artistId = artistId;
-        a.provenanceId = provenanceId;
+        a.artist = artist;
+        a.provenance = provenance;
         Db.instance.INSERT.INTO(Artwork.class).VALUES(a).EXEC();
         return a;
     }
 
-    private static void artistEpoch(int artistId, int epochId) {
+    private static void artistEpoch(Artist artist, Epoch epoch) {
         ArtistEpoch ae = new ArtistEpoch();
-        ae.artistId = artistId;
-        ae.epochId = epochId;
+        ae.artist = artist;
+        ae.epoch = epoch;
         Db.instance.INSERT.INTO(ArtistEpoch.class).VALUES(ae).EXEC();
+    }
+
+    private static void userRole(User user, Role role) {
+        UserRole ur = new UserRole();
+        ur.user = user;
+        ur.role = role;
+        Db.instance.INSERT.INTO(UserRole.class).VALUES(ur).EXEC();
+    }
+
+    private static void rating(String label, Artwork artwork, Stars stars, User user) {
+        Rating r = new Rating();
+        r.displayedAs = label;
+        r.artwork = artwork;
+        r.stars = stars;
+        r.user = user;
+        Db.instance.INSERT.INTO(Rating.class).VALUES(r).EXEC();
     }
 }

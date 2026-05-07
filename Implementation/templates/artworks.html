@@ -38,8 +38,8 @@
                             <td>{{ id }}</td>
                             <td>{{ displayedAs }}</td>
                             <td>{{ material }}</td>
-                            <td>{{ artist }}</td>
-                            <td>{{ provenance }}</td>
+                            <td>{{ artist.displayedAs }}</td>
+                            <td>{{ provenance.displayedAs }}</td>
                             <td>
                                 <form method="GET" action="/artworks/edit" style="display:inline;">
                                     <input type="hidden" name="id" value="{{ id }}">

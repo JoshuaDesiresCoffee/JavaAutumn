@@ -14,11 +14,15 @@ public class StarsHandler extends CrudHandler<Stars> {
         super(Stars.class, "/stars", "stars.html", "starsList");
     }
 
+    /** Eager-load child ratings so {@link #decorateRow} can size them without a second query. */
+    @Override
+    protected List<Stars> selectAll() {
+        return Db.instance.SELECT.FROM(Stars.class).JOIN(Rating.class).EXEC();
+    }
+
     @Override
     protected void decorateRow(Stars stars, Map<String, Object> row) {
-        List<Rating> ratings = Db.instance.SELECT.FROM(Rating.class).EXEC();
-        long ratingCount = ratings.stream().filter(r -> r.starsId == stars.id).count();
-        row.put("ratingCount", ratingCount);
+        row.put("ratingCount", stars.ratings == null ? 0 : stars.ratings.size());
     }
 
     @Override

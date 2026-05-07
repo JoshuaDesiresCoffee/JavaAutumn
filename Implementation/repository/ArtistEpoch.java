@@ -7,6 +7,6 @@ import Autumn.orm.Table;
 public class ArtistEpoch {
     @Id
     public int id;
-    public int artistId;
-    public int epochId;
+    public Artist artist;
+    public Epoch epoch;
 }

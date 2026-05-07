@@ -7,6 +7,6 @@ import Autumn.orm.Table;
 public class UserRole {
     @Id
     public int id;
-    public int userId;
-    public int roleId;
+    public User user;
+    public Role role;
 }

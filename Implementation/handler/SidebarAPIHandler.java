@@ -6,8 +6,6 @@ import Autumn.templating.Json;
 import Implementation.repository.*;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 public class SidebarAPIHandler {
     public static class SidebarData {

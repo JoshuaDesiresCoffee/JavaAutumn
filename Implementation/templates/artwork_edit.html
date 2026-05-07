@@ -7,7 +7,7 @@
         <script src="/static/script.js" defer></script>
     </head>
     <body>
-        <h1>Edit Artwork: {{ artworkTitle }}</h1>
+        <h1>Edit Artwork: {{ artwork.displayedAs }}</h1>
 
         <div class="buttons">
             <a class="table-link" href="/artworks">Back to Artworks</a>
@@ -15,14 +15,14 @@
 
         <div class="form-container">
             <form method="POST" action="/artworks/update">
-                <input type="hidden" name="id" value="{{ artworkId }}">
-                
+                <input type="hidden" name="id" value="{{ artwork.id }}">
+
                 <label>Title</label>
-                <input type="text" name="displayedAs" value="{{ artworkTitle }}" required style="width: 100%; margin-bottom: 12px;">
-                
+                <input type="text" name="displayedAs" value="{{ artwork.displayedAs }}" required style="width: 100%; margin-bottom: 12px;">
+
                 <label>Material</label>
-                <input type="text" name="material" value="{{ artworkMaterial }}" required style="width: 100%; margin-bottom: 12px;">
-                
+                <input type="text" name="material" value="{{ artwork.material }}" required style="width: 100%; margin-bottom: 12px;">
+
                 <label>Artist</label>
                 <select name="artistId" required style="width: 100%; margin-bottom: 12px;">
                     {{#each artists}}
@@ -43,8 +43,8 @@
             document.addEventListener("DOMContentLoaded", () => {
                 const artistSelect = document.querySelector('select[name="artistId"]');
                 const provSelect = document.querySelector('select[name="provenanceId"]');
-                if (artistSelect) artistSelect.value = "{{ artworkArtistId }}";
-                if (provSelect) provSelect.value = "{{ artworkProvenanceId }}";
+                if (artistSelect) artistSelect.value = "{{ artwork.artist.id }}";
+                if (provSelect) provSelect.value = "{{ artwork.provenance.id }}";
             });
         </script>
     </body>

@@ -36,9 +36,9 @@
                 <tr>
                     <td>{{ id }}</td>
                     <td>{{ displayedAs }}</td>
-                    <td>{{ artworkName }}</td>
-                    <td style="font-size:1.2rem; letter-spacing:2px;">{{ starsLabel }}</td>
-                    <td>{{ userName }}</td>
+                    <td>{{ artwork.displayedAs }}</td>
+                    <td style="font-size:1.2rem; letter-spacing:2px;">{{ stars.displayedAs }}</td>
+                    <td>{{ user.name }}</td>
                     <td>
                         <form method="POST" action="/ratings/delete" style="display:inline;">
                             <input type="hidden" name="id" value="{{ id }}">

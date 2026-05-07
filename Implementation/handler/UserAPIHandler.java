@@ -5,12 +5,10 @@ import Autumn.handler.Exchange;
 import Implementation.repository.User;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 
 /**
- * GET-based JSON API for users. Reads parameters from the query string instead of
- * the form body, but otherwise reuses the standard CRUD machinery.
+ * User REST-ish endpoints: {@code GET /api/user/all} returns JSON; create/update/delete use
+ * {@code POST} with {@code application/x-www-form-urlencoded} bodies ({@link CrudHandler} form binding).
  */
 public class UserAPIHandler extends CrudHandler<User> {
 
@@ -22,25 +20,6 @@ public class UserAPIHandler extends CrudHandler<User> {
     @Override
     public void list(Exchange exchange) throws IOException {
         api(exchange);
-    }
-
-    /** Bind the entity from query parameters since these endpoints use GET. */
-    @Override
-    protected User bindFromForm(Exchange exchange, boolean includeId) throws Exception {
-        User user = new User();
-        for (Field f : User.class.getDeclaredFields()) {
-            if (Modifier.isStatic(f.getModifiers()) || f.isSynthetic()) continue;
-            if (!includeId && "id".equals(f.getName())) continue;
-            String raw = exchange.queryParam(f.getName(), "").trim();
-            if (raw.isBlank()) continue;
-            f.setAccessible(true);
-            if (f.getType() == int.class || f.getType() == Integer.class) {
-                f.set(user, Integer.parseInt(raw));
-            } else {
-                f.set(user, raw);
-            }
-        }
-        return user;
     }
 
     @Override
