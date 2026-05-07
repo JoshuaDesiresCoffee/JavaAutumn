@@ -37,13 +37,13 @@
                             <td>{{ email }}</td>
                             <td>
                                 <div class="row-form">
-                                    <form class="inline-form" method="get" action="/api/user_update">
+                                    <form class="inline-form" method="post" action="/api/user_update">
                                         <input type="hidden" name="id" value="{{ id }}">
                                         <input name="name" value="{{ name }}" placeholder="Name">
                                         <input name="email" value="{{ email }}" placeholder="Email">
                                         <button type="submit">Update</button>
                                     </form>
-                                    <form class="delete-form" method="get" action="/api/user_delete">
+                                    <form class="delete-form" method="post" action="/api/user_delete">
                                         <input type="hidden" name="id" value="{{ id }}">
                                         <button type="submit">Delete</button>
                                     </form>
@@ -57,7 +57,7 @@
 
         <div class="create-panel">
             <h2>Create User</h2>
-            <form class="inline-form" method="get" action="/api/user_create">
+            <form class="inline-form" method="post" action="/api/user_create">
                 <label>Name</label>
                 <input name="name" placeholder="Alice">
                 <label>Email</label>

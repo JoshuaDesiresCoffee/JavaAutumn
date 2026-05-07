@@ -31,9 +31,9 @@ public class App {
 
         var userApi = new UserAPIHandler();
         router.GET("/api/user/all",    userApi::list);
-        router.GET("/api/user_create", userApi::create);
-        router.GET("/api/user_update", userApi::update);
-        router.GET("/api/user_delete", userApi::delete);
+        router.POST("/api/user_create", userApi::create);
+        router.POST("/api/user_update", userApi::update);
+        router.POST("/api/user_delete", userApi::delete);
 
         router.GET("/api/sidebar", SidebarAPIHandler::getSidebarData);
 
