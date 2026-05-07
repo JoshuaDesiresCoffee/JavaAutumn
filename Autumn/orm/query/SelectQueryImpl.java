@@ -280,8 +280,19 @@ public class SelectQueryImpl<T> extends BaseQuery<T> implements SelectQuery<T> {
         Object obj = instantiate(cls);
         for (FieldInfo fi : EntityMapper.getFields(cls)) {
             if (fi.columnName == null || fi.isOneToMany || fi.isManyToMany) continue;
-            Object val = rs.getObject(fi.columnName);
-            if (val != null) fi.field.set(obj, coerce(val, fi.field.getType()));
+            if (fi.isForeignKey) {
+                // Mirror hydrate(): place an id-only stub on FK fields so nested entities load cleanly.
+                Object fkId = rs.getObject(fi.columnName);
+                if (fkId != null) {
+                    Object stub = instantiate(fi.relatedType);
+                    FieldInfo idField = EntityMapper.getIdField(fi.relatedType);
+                    idField.field.set(stub, coerce(fkId, idField.field.getType()));
+                    fi.field.set(obj, stub);
+                }
+            } else {
+                Object val = rs.getObject(fi.columnName);
+                if (val != null) fi.field.set(obj, coerce(val, fi.field.getType()));
+            }
         }
         return obj;
     }
