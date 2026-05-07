@@ -2,6 +2,7 @@ package Autumn.handler;
 
 import Autumn.Router;
 import Autumn.orm.Db;
+import Autumn.orm.Table;
 import Autumn.templating.Json;
 import Autumn.templating.ObjectToMapConverter;
 import Autumn.templating.Templater;
@@ -41,7 +42,7 @@ public abstract class CrudHandler<T> {
 
     public void list(Exchange exchange) throws IOException {
         try {
-            List<T> entities = Db.instance.SELECT.FROM(entityClass).EXEC();
+            List<T> entities = selectAll();
             List<Map<String, Object>> rows = new ArrayList<>(entities.size());
             for (T entity : entities) {
                 Map<String, Object> row = ObjectToMapConverter.convert(entity);
@@ -109,7 +110,7 @@ public abstract class CrudHandler<T> {
 
     public void api(Exchange exchange) throws IOException {
         try {
-            exchange.json(Json.toJson(Db.instance.SELECT.FROM(entityClass).EXEC()));
+            exchange.json(Json.toJson(selectAll()));
         } catch (Exception e) {
             exchange.send(500, e.getMessage());
         }
@@ -131,6 +132,14 @@ public abstract class CrudHandler<T> {
     // Hooks for subclasses
     // ---------------------------------------------------------------------
 
+    /**
+     * Load the rows shown by {@link #list(Exchange)} / {@link #api(Exchange)}. Override to add
+     * {@code JOIN(...)} or filtering. Default: a flat {@code SELECT *} (FK fields stay as id-only stubs).
+     */
+    protected List<T> selectAll() {
+        return Db.instance.SELECT.FROM(entityClass).EXEC();
+    }
+
     /** Add fields to a row before it is rendered. Default: no-op. */
     protected void decorateRow(T entity, Map<String, Object> row) {}
 
@@ -145,18 +154,32 @@ public abstract class CrudHandler<T> {
     }
 
     /**
-     * Build an entity from form parameters, matching field names. The {@code id} field
-     * is set only when {@code includeId} is true (i.e. for updates).
+     * Build an entity from form parameters, matching field names.
+     *
+     * <p>For a field whose type is a {@code @Table} class (FK relation), we read
+     * {@code <fieldName>Id} (e.g. {@code artistId}) and attach a stub object carrying just that id —
+     * which is what the ORM expects for INSERT / UPDATE FK columns.
+     *
+     * <p>The {@code id} field is set only when {@code includeId} is true (i.e. for updates).
      */
     protected T bindFromForm(Exchange exchange, boolean includeId) throws Exception {
         T entity = entityClass.getDeclaredConstructor().newInstance();
         for (Field f : entityClass.getDeclaredFields()) {
             if (Modifier.isStatic(f.getModifiers()) || f.isSynthetic()) continue;
             if (!includeId && "id".equals(f.getName())) continue;
+            f.setAccessible(true);
+
+            Class<?> ftype = f.getType();
+            if (ftype.isAnnotationPresent(Table.class)) {
+                String raw = exchange.formParam(f.getName() + "Id", "");
+                if (raw.isBlank()) continue;
+                f.set(entity, BaseHandler.stubWithId(ftype, Integer.parseInt(raw.trim())));
+                continue;
+            }
+
             String raw = exchange.formParam(f.getName(), "");
             if (raw.isBlank()) continue;
-            f.setAccessible(true);
-            f.set(entity, BaseHandler.coerce(raw, f.getType()));
+            f.set(entity, BaseHandler.coerce(raw, ftype));
         }
         return entity;
     }

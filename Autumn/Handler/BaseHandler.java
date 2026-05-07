@@ -1,6 +1,10 @@
 package Autumn.handler;
 
 import Autumn.orm.Db;
+import Autumn.orm.Table;
+import Autumn.orm.mapping.EntityMapper;
+import Autumn.orm.mapping.EntityMapper.FieldInfo;
+import Autumn.orm.query.SelectQuery;
 import Autumn.templating.ObjectToMapConverter;
 import Autumn.templating.Templater;
 
@@ -11,6 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.ToIntFunction;
 
 /**
  * Stateless utility helpers shared by all handlers.
@@ -42,6 +48,38 @@ public final class BaseHandler {
         return toRows(Db.instance.SELECT.FROM(clazz).EXEC());
     }
 
+    /**
+     * Map primary key → label for lookup tables (same id resolution as the ORM uses for @Id).
+     */
+    public static <E> Map<Integer, String> mapIds(List<E> rows, Class<E> entityClass, Function<E, String> label) {
+        if (rows.isEmpty()) return Map.of();
+        FieldInfo idField = EntityMapper.getIdField(entityClass);
+        Map<Integer, String> out = HashMap.newHashMap(rows.size());
+        for (E row : rows) {
+            try {
+                Object idObj = idField.field.get(row);
+                int id = ((Number) idObj).intValue();
+                out.put(id, label.apply(row));
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Counts rows grouped by an int key (e.g. {@code roleId} on junction rows). Use after
+     * {@code SELECT.FROM(Junction.class).EXEC()}; the ORM does not infer this from entity shape alone.
+     */
+    public static <T> Map<Integer, Long> countByIntKey(List<T> rows, ToIntFunction<T> key) {
+        if (rows.isEmpty()) return Map.of();
+        Map<Integer, Long> m = HashMap.newHashMap(rows.size());
+        for (T row : rows) {
+            m.merge(key.applyAsInt(row), 1L, Long::sum);
+        }
+        return m;
+    }
+
     /** Render {@code template} with a single key bound to all rows of {@code clazz}. */
     public static <E> void renderList(Exchange exchange, String template, String key, Class<E> clazz)
             throws IOException {
@@ -54,8 +92,13 @@ public final class BaseHandler {
 
     /** Read an id from the form body, falling back to the query string. */
     public static Optional<Integer> idParam(Exchange exchange) {
-        String s = exchange.formParam("id", "");
-        if (s.isBlank()) s = exchange.queryParam("id", "");
+        return intFormParam(exchange, "id");
+    }
+
+    /** Read an int from the form body, falling back to the query string. Empty/non-numeric → empty. */
+    public static Optional<Integer> intFormParam(Exchange exchange, String name) {
+        String s = exchange.formParam(name, "");
+        if (s.isBlank()) s = exchange.queryParam(name, "");
         if (s.isBlank()) return Optional.empty();
         try {
             return Optional.of(Integer.parseInt(s.trim()));
@@ -101,7 +144,12 @@ public final class BaseHandler {
             }
             int id = Integer.parseInt(idStr);
 
-            List<E> results = Db.instance.SELECT.FROM(clazz).WHERE("id = ?", id).EXEC();
+            // JOIN every FK relation so nested objects come back hydrated (no N+1, no stubs).
+            SelectQuery<E> q = Db.instance.SELECT.FROM(clazz).WHERE("id = ?", id).LIMIT(1);
+            for (FieldInfo fi : EntityMapper.getFields(clazz)) {
+                if (fi.isForeignKey && fi.relatedType != null) q = q.JOIN(fi.relatedType);
+            }
+            List<E> results = q.EXEC();
             if (results.isEmpty()) {
                 exchange.send(404, entityName + " not found.");
                 return;
@@ -133,10 +181,8 @@ public final class BaseHandler {
                 }
                 if (name.equals("displayedAs")) {
                     displayedAs = val.toString();
-                    fields.add(Map.of("key", name, "value", val));
-                } else {
-                    fields.add(Map.of("key", name, "value", val));
                 }
+                fields.add(Map.of("key", name, "value", labelFor(val)));
             }
 
             Map<String, Object> ctx = new HashMap<>();
@@ -168,5 +214,39 @@ public final class BaseHandler {
         if (type == double.class  || type == Double.class)  return Double.parseDouble(value);
         if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(value);
         return value;
+    }
+
+    /**
+     * Build a stub of {@code relatedType} carrying just the {@code @Id} field set to {@code id}.
+     * Used to bind FK fields from form values like {@code artistId=42}.
+     */
+    public static Object stubWithId(Class<?> relatedType, int id) {
+        try {
+            Object stub = relatedType.getDeclaredConstructor().newInstance();
+            FieldInfo idField = EntityMapper.getIdField(relatedType);
+            idField.field.set(stub, BaseHandler.coerce(Integer.toString(id), idField.field.getType()));
+            return stub;
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Failed to build stub for " + relatedType.getSimpleName(), e);
+        }
+    }
+
+    /** Renders an FK object as its {@code displayedAs} (or {@code name}) value; non-FK values pass through. */
+    private static Object labelFor(Object val) {
+        if (val == null) return "-";
+        Class<?> c = val.getClass();
+        if (!c.isAnnotationPresent(Table.class)) return val;
+        for (String candidate : new String[]{"displayedAs", "name"}) {
+            try {
+                Field f = c.getDeclaredField(candidate);
+                f.setAccessible(true);
+                Object label = f.get(val);
+                if (label != null && !label.toString().isBlank()) return label;
+            } catch (NoSuchFieldException ignored) {
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return "(linked)";
     }
 }
