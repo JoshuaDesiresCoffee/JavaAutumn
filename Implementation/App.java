@@ -44,8 +44,7 @@ public class App {
         router.GET("/user",       ex -> BaseHandler.renderDetail(ex, "User", User.class));
         router.GET("/role",       ex -> BaseHandler.renderDetail(ex, "Role", Role.class));
         router.GET("/rating",     ex -> BaseHandler.renderDetail(ex, "Rating", Rating.class));
-        router.GET("/stars",      ex -> BaseHandler.renderDetail(ex, "Stars", Stars.class));
-
+        
         var artworks = new ArtworkHandler();
         artworks.registerCrud(router);
         router.GET("/artworks/edit",   artworks::editForm);
