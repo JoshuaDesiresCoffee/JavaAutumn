@@ -16,16 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Generic base class for CRUD-style HTTP handlers.
- *
- * <p>Subclasses get list/create/update/delete/api/detail operations for free.
- * Override the protected hooks ({@link #decorateRow}, {@link #extraListContext},
- * {@link #bindFromForm}, {@link #validate}) to customize behavior.
- *
- * <p>Stateless helpers live on {@link BaseHandler} so handlers that don't fit
- * the CRUD shape can use them without inheriting from this class.
- */
+/** Generic CRUD handler. Subclasses get list/create/update/delete/api/detail and override the protected hooks. */
 public abstract class CrudHandler<T> {
 
     protected final Class<T> entityClass;
@@ -76,18 +67,15 @@ public abstract class CrudHandler<T> {
 
     public void update(Exchange exchange) throws IOException {
         try {
-            Optional<Integer> idOpt = BaseHandler.idParam(exchange);
-            if (idOpt.isEmpty()) {
-                exchange.send(400, "id is required");
-                return;
-            }
+            Integer id = requireId(exchange);
+            if (id == null) return;
             T entity = bindFromForm(exchange, true);
             String error = validate(entity);
             if (error != null) {
                 exchange.send(400, error);
                 return;
             }
-            Db.instance.UPDATE(entityClass).SET(entity).WHERE("id = ?", idOpt.get()).EXEC();
+            Db.instance.UPDATE(entityClass).SET(entity).WHERE("id = ?", id).EXEC();
             exchange.redirect(routePrefix);
         } catch (Exception e) {
             exchange.send(500, "Failed to update " + entityClass.getSimpleName() + ": " + e.getMessage());
@@ -95,13 +83,10 @@ public abstract class CrudHandler<T> {
     }
 
     public void delete(Exchange exchange) throws IOException {
-        Optional<Integer> idOpt = BaseHandler.idParam(exchange);
-        if (idOpt.isEmpty()) {
-            exchange.send(400, "id is required");
-            return;
-        }
+        Integer id = requireId(exchange);
+        if (id == null) return;
         try {
-            Db.instance.DELETE.FROM(entityClass).WHERE("id = ?", idOpt.get()).EXEC();
+            Db.instance.DELETE.FROM(entityClass).WHERE("id = ?", id).EXEC();
             exchange.redirect(routePrefix);
         } catch (Exception e) {
             BaseHandler.renderDeleteError(exchange, e);
@@ -120,7 +105,7 @@ public abstract class CrudHandler<T> {
         BaseHandler.renderDetail(exchange, entityClass.getSimpleName(), entityClass);
     }
 
-    /** Register the standard CRUD routes (GET list, POST create/update/delete). */
+    /** Registers list (GET) and create/update/delete (POST) on the route prefix. */
     public void registerCrud(Router router) {
         router.GET(routePrefix, this::list);
         router.POST(routePrefix + "/create", this::create);
@@ -128,40 +113,33 @@ public abstract class CrudHandler<T> {
         router.POST(routePrefix + "/delete", this::delete);
     }
 
-    // ---------------------------------------------------------------------
-    // Hooks for subclasses
-    // ---------------------------------------------------------------------
+    /** Reads the id from the request; sends 400 and returns null if missing. */
+    private static Integer requireId(Exchange exchange) throws IOException {
+        Optional<Integer> id = BaseHandler.idParam(exchange);
+        if (id.isEmpty()) {
+            exchange.send(400, "id is required");
+            return null;
+        }
+        return id.get();
+    }
 
-    /**
-     * Load the rows shown by {@link #list(Exchange)} / {@link #api(Exchange)}. Override to add
-     * {@code JOIN(...)} or filtering. Default: a flat {@code SELECT *} (FK fields stay as id-only stubs).
-     */
+    /** Override to add JOIN(...) or filtering. Default: a flat SELECT with id-only FK stubs. */
     protected List<T> selectAll() {
         return Db.instance.SELECT.FROM(entityClass).EXEC();
     }
 
-    /** Add fields to a row before it is rendered. Default: no-op. */
     protected void decorateRow(T entity, Map<String, Object> row) {}
 
-    /** Provide additional context entries for the list template. Default: empty. */
     protected Map<String, Object> extraListContext() {
         return Map.of();
     }
 
-    /** Validate a bound entity. Return null on success, an error message on failure. */
+    /** Returns null if valid, otherwise an error message shown as 400. */
     protected String validate(T entity) {
         return null;
     }
 
-    /**
-     * Build an entity from form parameters, matching field names.
-     *
-     * <p>For a field whose type is a {@code @Table} class (FK relation), we read
-     * {@code <fieldName>Id} (e.g. {@code artistId}) and attach a stub object carrying just that id —
-     * which is what the ORM expects for INSERT / UPDATE FK columns.
-     *
-     * <p>The {@code id} field is set only when {@code includeId} is true (i.e. for updates).
-     */
+    /** Build entity from form params. FK fields are read as "{@code <name>Id}" and stored as id-only stubs. */
     protected T bindFromForm(Exchange exchange, boolean includeId) throws Exception {
         T entity = entityClass.getDeclaredConstructor().newInstance();
         for (Field f : entityClass.getDeclaredFields()) {
