@@ -1,5 +1,7 @@
 package Autumn.templating;
 
+import Autumn.orm.Table;
+
 import java.lang.reflect.Field;
 import java.util.List;
 
@@ -36,6 +38,7 @@ public final class Json {
         if (val instanceof Number)      return val.toString();
         if (val instanceof Boolean)     return val.toString();
         if (val instanceof List<?>)     return toJson(val);
+        if (val.getClass().isAnnotationPresent(Table.class)) return toJson(val);
         return "\"" + escapeString(val.toString()) + "\"";
     }
 
