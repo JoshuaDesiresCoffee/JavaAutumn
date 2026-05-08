@@ -58,8 +58,8 @@ public class RoleHandler extends CrudHandler<Role> {
         }
         try {
             UserRole probe = new UserRole();
-            probe.user = (User) BaseHandler.stubWithId(User.class, userId.get());
-            probe.role = (Role) BaseHandler.stubWithId(Role.class, roleId.get());
+            probe.user = Db.instance.stub(User.class, userId.get());
+            probe.role = Db.instance.stub(Role.class, roleId.get());
             if (Db.instance.SELECT.FROM(UserRole.class).WHERE(probe).LIMIT(1).EXEC().isEmpty()) {
                 Db.instance.INSERT.INTO(UserRole.class).VALUES(probe).EXEC();
             }
