@@ -1,5 +1,7 @@
 package Autumn.templating;
 
+import Autumn.orm.Table;
+
 import java.lang.reflect.Field;
 import java.util.List;
 
@@ -36,6 +38,31 @@ public final class Json {
         if (val instanceof Number)      return val.toString();
         if (val instanceof Boolean)     return val.toString();
         if (val instanceof List<?>)     return toJson(val);
-        return "\"" + val.toString().replace("\"", "\\\"") + "\"";
+        if (val.getClass().isAnnotationPresent(Table.class)) return toJson(val);
+        return "\"" + escapeString(val.toString()) + "\"";
+    }
+
+    private static String escapeString(String value) {
+        StringBuilder escaped = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '\\' -> escaped.append("\\\\");
+                case '"' -> escaped.append("\\\"");
+                case '\b' -> escaped.append("\\b");
+                case '\f' -> escaped.append("\\f");
+                case '\n' -> escaped.append("\\n");
+                case '\r' -> escaped.append("\\r");
+                case '\t' -> escaped.append("\\t");
+                default -> {
+                    if (c < 0x20) {
+                        escaped.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        escaped.append(c);
+                    }
+                }
+            }
+        }
+        return escaped.toString();
     }
 }

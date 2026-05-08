@@ -2,17 +2,23 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{{ title }}</title>
+        <title>Welcome to JavaAutumn</title>
         <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/script.js" defer></script>
     </head>
     <body>
-        <h1>{{ title }}</h1>
-        <p>{{ subtitle }}</p>
-        <div class="message">{{ message }}</div>
-        <div>{{ table_navigation }}</div>
-        <div>{{ table_panel }}</div>
-        <div class="create-panel">
-            {{ create_form }}
+        <div style="text-align: center; margin-top: 50px;">
+            <h1 style="font-size: 3.5rem; color: var(--accent-orange); margin-bottom: 10px;">JavaAutumn</h1>
+            <h2 style="font-size: 1.5rem; color: var(--text-muted); font-weight: 300;">Art Gallery & Catalog System</h2>
+            
+            <div style="margin: 40px auto; max-width: 600px; line-height: 1.6; color: var(--text-main); background: var(--bg-panel); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+                <p style="margin-bottom: 15px;">Welcome to the <strong>JavaAutumn</strong> interactive art catalog. This minimal, high-performance platform allows you to explore world-renowned artists, view magnificent artworks, and manage gallery data.</p>
+                <p>Use the dynamic sidebar on the left to navigate through Epochs, Provenances, and Artists, or manage roles and users with ease.</p>
+                
+                <div style="margin-top: 30px;">
+                    <a href="/artworks" class="table-link active" style="font-size: 1.1rem; padding: 12px 24px;">Explore Artworks ↗</a>
+                </div>
+            </div>
         </div>
     </body>
 </html>

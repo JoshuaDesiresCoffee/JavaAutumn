@@ -10,45 +10,50 @@ Features:
 - HTML template parser
 - Easy routing registration
 - Server-side rendering (SSR)
-- Generic table CRUD via metadata
-- Fast, modifyable and flexible
+- Annotated entities (`@Table`) plus `CrudHandler` for list/create/update/delete
+- Fast, modifiable and flexible
 
 ---
 
 ## Structure
 
-### /Implementation.handler/
-Implementation.handler contains all classes which feature the necessary lambdas for routing registration.
-In order to be eligable as a handler for routing, it has to follow the following footprint:
+### /Implementation/handler/
+Application handlers (one class per resource). Most extend `Autumn.handler.CrudHandler<T>` and reuse the helpers in `Autumn.handler.BaseHandler`.
+Route methods take an `Autumn.handler.Exchange`:
 ```
-Implementation.templates.public static void MyHandlerName(HttpExchange exchange)
+public void list(Exchange exchange) throws IOException
 ```
-Returns will be ignored and only static functions allowed.
+Lambdas / method references work too: `router.GET("/roles", roles::list);`
 
 
-### /Repository/
-Contains all classes modeling to- and querying the database.
-`GenericTableRepository` introspects table metadata and can perform CRUD on user-defined tables.
+### /Implementation/repository/
+`@Table`-annotated entity classes (e.g. `Artist`, `Artwork`, `Rating`).
+Foreign keys are object references (`Artwork.artist`); collections use `@OneToMany`.
+All CRUD goes through `Autumn.orm.Db` (`Db.instance.SELECT.FROM(...)`, `INSERT.INTO(...)`, `UPDATE(...)`, `DELETE.FROM(...)`).
 
-### /Autumn.Implementation.handler.Service/
-Different kind of services needed for the framework.
-- Router: Handles registration and execution of routing within the web framework.
-- Templater: Reads files and renders Implementation.templates.
-- Database: JDBC connection provider.
+### /Autumn/
+Framework code, layered:
+- `Autumn.Router` - route registration and dispatch.
+- `Autumn.handler.*` - `Exchange`, `BaseHandler`, `CrudHandler`.
+- `Autumn.orm.*` - `Db`, query builders, `EntityMapper`, schema sync.
+- `Autumn.templating.*` - `Templater`, `ObjectToMapConverter`, `Json`.
 
-### /Autumn.Implementation.handler.Service/templating/
+### /Autumn/templating/
 Contains the template engine (`Templater`).
 
-#### Templater 
-- Reads Implementation.templates from `/Implementation.templates`.
+#### Templater
+- Reads templates from `/Implementation/templates`.
 - Renders placeholders with `Map<String, ?>` context values.
-- Supports placeholder syntax:
+- Supported syntax:
 ```
-{{ key }}
+{{ key }}            // value or nested key.path
+{{#if key}} ... {{/if}}
+{{#each items}} ... {{/each}}
 ```
 Notes:
-- Missing keys render as empty strings
-- Prevents `../` path traversal outside the template root
+- Lists render comma-joined; objects use `displayedAs` / `name` if present (entity-friendly via duck-typing, no ORM import).
+- Missing keys render as empty strings.
+- Prevents `../` path traversal outside the template root.
 
 Example usage:
 ```java
@@ -57,28 +62,38 @@ String html = Templater.render("index.html", Map.of(
 ));
 ```
 
-### /Implementation.templates/
+### /Implementation/templates/
 Contains HTML files with templating structure.
 
 ### Implementation.App.java
-Entrypoint of the application. Reads configuration files, creates initial objects and registers routes, as well as starts the webserver.
+Entrypoint: DB from `AppConfig` (`@Database`), schema sync, registers routes, starts the server.
 
 ---
 
 ## Endpoints
 
-### SSR
-- `GET /` renders table selection + CRUD forms server-side.
-- `POST /create?table=<name>`
-- `POST /update?table=<name>`
-- `POST /delete?table=<name>`
+### SSR (server-rendered)
+- `GET /`, `GET /users` — landing + user list.
+- Detail pages: `GET /artist?id=…`, `/artwork`, `/provenance`, `/epoch`, `/user`, `/role`, `/rating` (rendered by `BaseHandler.renderDetail`).
+- List + CRUD per resource:
+    - Artworks: `GET /artworks`, `POST /artworks/create|update|delete`, `GET /artworks/edit?id=…`
+    - Ratings: `GET /ratings`, `POST /ratings/create|delete`
+    - Stars:   `GET /stars`,   `POST /stars/create|delete`
+    - Roles:   `GET /roles`,   `POST /roles/create|delete|assign|remove-user`
 
-### API formula
-- `GET /api/tables`
-- `GET /api/rows?table=<name>`
-- `POST /api/rows?table=<name>`
-- `PUT /api/rows?table=<name>&id=<pk>`
-- `DELETE /api/rows?table=<name>&id=<pk>`
+### JSON API
+- `GET /api/sidebar`
+- `GET /api/user/all`, `POST /api/user_create|user_update|user_delete`
+- `GET /api/artwork/all`
+
+---
+
+## Known limitations
+
+- No global user switcher; user is picked per action.
+- Roles modeled but not enforced yet.
+- No CRUD UI for Artist, Epoch, Provenance.
+- Rename folder names with package names (`handler` not `Handler`).
 
 ---
 
@@ -86,44 +101,42 @@ Entrypoint of the application. Reads configuration files, creates initial object
 
 Prerequisites:
 - Java 25 installed (`java -version`, `javac -version`)
-- SQLite JDBC jar at `Autumn.lib/sqlite-jdbc-3.51.3.0.jar`
+- SQLite JDBC jar at `Autumn/lib/sqlite-jdbc-3.51.3.0.jar`
 
-Build:
-```powershell
-.\build.ps1
+One script per platform; build is included.
+
+### macOS / Linux (`dev.sh`)
+
+```bash
+chmod +x dev.sh           # once after clone
+
+./dev.sh build            # compile only
+./dev.sh build --clean    # wipe out/ first
+./dev.sh run              # build + start server (Implementation.App)
+./dev.sh run --skip-build
+./dev.sh test             # TestRunner with -ea
+./dev.sh seed             # seed if empty
+./dev.sh seed --reset     # delete app.db, sync + seed
+./dev.sh kill             # stop whatever listens on port 8080
 ```
 
-Run (build + start):
+First time after clone: `./dev.sh seed` once.
+
+### Windows (`dev.ps1`)
+
 ```powershell
-.\run.ps1
+.\dev.ps1 build
+.\dev.ps1 build -Clean
+.\dev.ps1 run
+.\dev.ps1 run -SkipBuild
+.\dev.ps1 test
+.\dev.ps1 seed
+.\dev.ps1 seed -Reset
+.\dev.ps1 kill
 ```
 
-Run without rebuilding:
-```powershell
-.\run.ps1 -SkipBuild
-```
+### Plain `java` (no script)
 
-Optional: clean build output first:
-```powershell
-.\build.ps1 -Clean
-```
-
-### Tests (no extra libraries)
-
-Uses Java’s built-in `assert` only; the JVM must enable assertions (`-ea`). Test sources live under `/Implementation.tests/` and compile with the app.
-
-```powershell
-.\test.ps1
-```
-
-Skip rebuild:
-
-```powershell
-.\test.ps1 -SkipBuild
-```
-
-Equivalent manual command after `.\build.ps1`:
-
-```powershell
-java -ea -cp "out;Autumn.lib/sqlite-jdbc-3.51.3.0.jar" Implementation.tests.TestRunner
+```bash
+java -ea -cp "out:Autumn/lib/sqlite-jdbc-3.51.3.0.jar" Implementation.tests.TestRunner
 ```

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stars — JavaAutumn</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/script.js" defer></script>
+</head>
+<body>
+    <h1>Stars</h1>
+
+    <div class="buttons">
+        <a class="table-link" href="/">Home</a>
+        <a class="table-link" href="/users">Users</a>
+        <a class="table-link" href="/artworks">Artworks</a>
+        <a class="table-link" href="/ratings">Ratings</a>
+        <a class="table-link active" href="/stars">Stars</a>
+        <a class="table-link" href="/roles">Roles</a>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Stars</th>
+                    <th>Value</th>
+                    <th>Linked Ratings</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each starsList}}
+                <tr>
+                    <td>{{ id }}</td>
+                    <td style="font-size:1.3rem; letter-spacing:2px;">{{ displayedAs }}</td>
+                    <td>{{ value }}</td>
+                    <td>{{ ratingCount }}</td>
+                    <td>
+                        <form method="POST" action="/stars/delete" style="display:inline;">
+                            <input type="hidden" name="id" value="{{ id }}">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="form-container">
+        <h2>Create New Stars Level</h2>
+        <form method="POST" action="/stars/create">
+            <select name="value" required>
+                <option value="">Select level...</option>
+                <option value="1">1 — •</option>
+                <option value="2">2 — ••</option>
+                <option value="3">3 — •••</option>
+                <option value="4">4 — ••••</option>
+                <option value="5">5 — •••••</option>
+            </select>
+            <input type="text" name="displayedAs" placeholder="Symbol (e.g. ••••)" required>
+            <button type="submit">Create Stars</button>
+        </form>
+    </div>
+</body>
+</html>

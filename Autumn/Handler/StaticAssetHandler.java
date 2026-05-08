@@ -10,9 +10,6 @@ import java.util.Map;
 
 public class StaticAssetHandler {
 
-    private static final String URL_PREFIX = "/static/";
-    private static final Path   FILE_ROOT  = Path.of(""); // folder on disk
-
     private static final Map<String, String> CONTENT_TYPES = Map.of(
             "css",  "text/css; charset=UTF-8",
             "js",   "application/javascript; charset=UTF-8",
@@ -23,15 +20,28 @@ public class StaticAssetHandler {
             "ico",  "image/x-icon"
     );
 
-    public static void serve(Exchange exchange) throws IOException {
+    private final String urlPrefix;
+    private final Path fileRoot;
+
+    public StaticAssetHandler(String urlPrefix, String fileRoot) {
+        this.urlPrefix = urlPrefix;
+        this.fileRoot = Path.of(fileRoot);
+    }
+
+    public static Handler withRoot(String urlPrefix, String fileRoot) {
+        var handler = new StaticAssetHandler(urlPrefix, fileRoot);
+        return handler::serve;
+    }
+
+    public void serve(Exchange exchange) throws IOException {
         String uriPath = exchange.uri().getPath();
 
-        if (!uriPath.startsWith(URL_PREFIX)) {
+        if (!uriPath.startsWith(urlPrefix)) {
             send(exchange, 404, "text/plain; charset=UTF-8", "Not found");
             return;
         }
 
-        String relative = uriPath.substring(URL_PREFIX.length());
+        String relative = uriPath.substring(urlPrefix.length());
 
         if (relative.isBlank()) {
             send(exchange, 404, "text/plain; charset=UTF-8", "Not found");
@@ -44,7 +54,11 @@ public class StaticAssetHandler {
             return;
         }
 
-        Path resolved = FILE_ROOT.resolve(relative).normalize();
+        Path resolved = fileRoot.resolve(relative).normalize();
+        if (!resolved.startsWith(fileRoot)) {
+            send(exchange, 403, "text/plain; charset=UTF-8", "Forbidden");
+            return;
+        }
 
         String contentType = CONTENT_TYPES.get(ext);
         serveFile(exchange, resolved, contentType);
@@ -56,15 +70,6 @@ public class StaticAssetHandler {
             return null;
         }
         return path.substring(dot + 1).toLowerCase();
-    }
-
-    private static String resolveContentType(String path) {
-        int dot = path.lastIndexOf('.');
-        if (dot != -1) {
-            String ext = path.substring(dot + 1).toLowerCase();
-            return CONTENT_TYPES.getOrDefault(ext, "application/octet-stream");
-        }
-        return "application/octet-stream";
     }
 
     private static void serveFile(Exchange exchange, Path filePath, String contentType) throws IOException {

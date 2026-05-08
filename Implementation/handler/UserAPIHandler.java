@@ -1,80 +1,31 @@
 package Implementation.handler;
 
+import Autumn.handler.CrudHandler;
 import Autumn.handler.Exchange;
-import Autumn.orm.Db;
-import Autumn.templating.Json;
 import Implementation.repository.User;
 
 import java.io.IOException;
 
-public class UserAPIHandler {
+/**
+ * User REST-ish endpoints: {@code GET /api/user/all} returns JSON; create/update/delete use
+ * {@code POST} with {@code application/x-www-form-urlencoded} bodies ({@link CrudHandler} form binding).
+ */
+public class UserAPIHandler extends CrudHandler<User> {
 
-    public static void get(Exchange exchange) throws IOException {
-
-        try {
-            var u = Db.instance.SELECT.FROM(User.class).LIMIT(1).EXEC();
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.send(201, Json.toJson(u));
-        } catch (Exception e) {
-            e.printStackTrace();
-            exchange.send(500, e.getMessage());
-        }
+    public UserAPIHandler() {
+        super(User.class, "/users", "user.html", "users");
     }
 
-    public static void list(Exchange exchange) throws IOException {
-
-        try {
-            var u = Db.instance.SELECT.FROM(User.class).EXEC();
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.send(201, Json.toJson(u));
-        } catch (Exception e) {
-            e.printStackTrace();
-            exchange.send(500, e.getMessage());
-        }
+    /** The list endpoint emits JSON, not HTML. */
+    @Override
+    public void list(Exchange exchange) throws IOException {
+        api(exchange);
     }
 
-    public static void create(Exchange exchange) throws IOException {
-
-        try {
-            var oldUserList = Db.instance.SELECT.FROM(User.class).EXEC();
-
-            User u = new User();
-            u.id = oldUserList.size() + 1;
-            u.email = "example@mail.com";
-            u.name = "Example";
-
-            var newUser = Db.instance.INSERT(u).EXEC();
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.send(201, Json.toJson(u));
-        } catch (Exception e) {
-            e.printStackTrace();
-            exchange.send(500, e.getMessage());
-        }
-    }
-
-    public static void update(Exchange exchange) throws IOException {
-        try {
-            User u = new User();
-            u.id = 1;
-            u.email = "updated@mail.com";
-            u.name = "Updated";
-
-            Db.instance.UPDATE(u).WHERE("id = " + u.id).EXEC();
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.send(200, Json.toJson(u));
-        } catch (Exception e) {
-            e.printStackTrace();
-            exchange.send(500, e.getMessage());
-        }
-    }
-
-    public static void delete(Exchange exchange) throws IOException {
-        try {
-            Db.instance.DELETE.FROM(User.class).WHERE("id = 1").EXEC();
-            exchange.send(200);
-        } catch (Exception e) {
-            e.printStackTrace();
-            exchange.send(500, e.getMessage());
-        }
+    @Override
+    protected String validate(User user) {
+        if (user.name == null || user.name.isBlank()) return "name is required";
+        if (user.email == null || user.email.isBlank()) return "email is required";
+        return null;
     }
 }
