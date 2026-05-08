@@ -1,19 +1,21 @@
 <#
-    Single entry point for local work. Low-level compile stays in build.ps1.
 
-    .\dev.ps1 run              # build + start server
+    .\dev.ps1 run              # build + start server (Implementation.App)
     .\dev.ps1 run -SkipBuild
-    .\dev.ps1 test
+    .\dev.ps1 test             # run TestRunner with -ea
     .\dev.ps1 seed             # fill DB if empty
     .\dev.ps1 seed -Reset      # delete app.db, sync + seed
-    .\dev.ps1 kill             # stop whatever listens on 8080
+    .\dev.ps1 build            # compile only
+    .\dev.ps1 build -Clean
+    .\dev.ps1 kill             # stop whatever listens on -Port (default 8080)
 #>
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('run', 'test', 'seed', 'kill')]
+    [ValidateSet('run', 'test', 'seed', 'build', 'kill')]
     [string]$Command = 'run',
 
     [switch]$SkipBuild,
+    [switch]$Clean,
     [string]$MainClass = 'Implementation.App',
     [string]$JarPath = 'Autumn/lib/sqlite-jdbc-3.51.3.0.jar',
     [string]$JavaRelease = '25',
@@ -25,7 +27,27 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function Ensure-Classpath {
+function Invoke-Build {
+    if (-not (Test-Path $JarPath)) {
+        throw "SQLite JDBC jar not found at '$JarPath'."
+    }
+    if ($Clean -and (Test-Path "out")) {
+        Remove-Item "out" -Recurse -Force
+    }
+    $javaFiles = Get-ChildItem -Path "." -Recurse -Filter "*.java" -File |
+        Where-Object { $_.FullName -notmatch "\\out\\" } |
+        ForEach-Object { $_.FullName }
+    if (-not $javaFiles -or $javaFiles.Count -eq 0) {
+        throw "No Java source files found."
+    }
+    New-Item -ItemType Directory -Path "out" -Force | Out-Null
+    Write-Host "Compiling Java sources with --release $JavaRelease ..."
+    & javac --release $JavaRelease -cp $JarPath -d out @javaFiles
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    Write-Host "Build successful. Classes are in ./out"
+}
+
+function Get-Classpath {
     if (-not (Test-Path $JarPath)) {
         throw "SQLite JDBC jar not found at '$JarPath'."
     }
@@ -54,14 +76,15 @@ switch ($Command) {
         }
         exit 0
     }
-
+    'build' {
+        Invoke-Build
+        exit 0
+    }
     default {
         if (-not $SkipBuild) {
-            & "$PSScriptRoot/build.ps1" -JavaRelease $JavaRelease -JarPath $JarPath
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            Invoke-Build
         }
-        $cp = Ensure-Classpath
-
+        $cp = Get-Classpath
         switch ($Command) {
             'run' {
                 Write-Host "Starting $MainClass ..."
