@@ -15,6 +15,9 @@ public interface SelectQuery<T> {
     /** Eagerly loads the given related type via a batched IN query — no N+1. */
     SelectQuery<T> JOIN(Class<?> related);
 
+    /** Auto-JOINs every directly-related type (FKs or @OneToMany) */
+    SelectQuery<T> JOIN_ALL();
+
     /** Sets the ORDER BY clause, e.g. {@code "created_at DESC"}. */
     SelectQuery<T> ORDER_BY(String orderByClause);
 

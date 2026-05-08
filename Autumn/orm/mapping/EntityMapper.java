@@ -95,6 +95,31 @@ public class EntityMapper {
                 .orElseThrow(() -> new RuntimeException("No @Id field (or field named 'id') on " + cls.getSimpleName()));
     }
 
+    /** Creates an entity stub with only its id set, for FK references from submitted ids */
+    public static <T> T stub(Class<T> entityClass, Object id) {
+        try {
+            T instance = entityClass.getDeclaredConstructor().newInstance();
+            FieldInfo idField = getIdField(entityClass);
+            idField.field.set(instance, coerceId(id, idField.field.getType()));
+            return instance;
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Failed to build stub for " + entityClass.getSimpleName(), e);
+        }
+    }
+
+    private static Object coerceId(Object id, Class<?> target) {
+        if (id == null || target.isInstance(id)) return id;
+        if (id instanceof Number n) {
+            if (target == int.class  || target == Integer.class) return n.intValue();
+            if (target == long.class || target == Long.class)    return n.longValue();
+        }
+        if (id instanceof CharSequence s) {
+            if (target == int.class  || target == Integer.class) return Integer.parseInt(s.toString().trim());
+            if (target == long.class || target == Long.class)    return Long.parseLong(s.toString().trim());
+        }
+        return id;
+    }
+
     public static String sqlType(Class<?> type) {
         if (type == int.class       || type == Integer.class)    return "INTEGER";
         if (type == long.class      || type == Long.class)       return "BIGINT";

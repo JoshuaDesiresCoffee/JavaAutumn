@@ -1,5 +1,6 @@
 package Autumn.orm;
 
+import Autumn.orm.mapping.EntityMapper;
 import Autumn.orm.mapping.SchemaSync;
 import Autumn.orm.pool.ConnectionPool;
 import Autumn.orm.pool.DataSourcePool;
@@ -69,6 +70,11 @@ public class Db {
     /** Begins an UPDATE statement for the given entity table. */
     public <T> UpdateSet<T> UPDATE(Class<T> tableClass) {
         return new UpdateQueryImpl<>(pool, tableClass);
+    }
+
+    /** Builds a stub of {@code entityClass} with only the id set */
+    public <T> T stub(Class<T> entityClass, Object id) {
+        return EntityMapper.stub(entityClass, id);
     }
 
     // ── Transactions ─────────────────────────────────────────────────────────

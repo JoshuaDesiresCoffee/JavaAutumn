@@ -35,6 +35,25 @@ public class SelectQueryImpl<T> extends BaseQuery<T> implements SelectQuery<T> {
     @Override public SelectQuery<T> JOIN(Class<?> related) {
         joins.add(related); return this;
     }
+    @Override public SelectQuery<T> JOIN_ALL() {
+        Set<Class<?>> seen = new HashSet<>();
+        seen.add(tableClass);
+        for (FieldInfo fi : EntityMapper.getFields(tableClass)) {
+            if (fi.relatedType == null) continue;
+            if (fi.isForeignKey || fi.isOneToMany) {
+                if (seen.add(fi.relatedType)) joins.add(fi.relatedType);
+                if (fi.isOneToMany) {
+                    for (FieldInfo childFi : EntityMapper.getFields(fi.relatedType)) {
+                        if (childFi.isForeignKey && childFi.relatedType != null
+                                && seen.add(childFi.relatedType)) {
+                            joins.add(childFi.relatedType);
+                        }
+                    }
+                }
+            }
+        }
+        return this;
+    }
     // Allows: column names, optional table prefix, optional ASC/DESC, comma-separated.
     // Rejects anything else (quotes, semicolons, subqueries, etc.).
     private static final java.util.regex.Pattern SAFE_ORDER_BY =
@@ -126,8 +145,7 @@ public class SelectQueryImpl<T> extends BaseQuery<T> implements SelectQuery<T> {
             if (!joins.contains(fi.relatedType)) continue;
 
             if (fi.isForeignKey) {
-                // Many-to-one: fully hydrate stubs already placed
-                fullyHydrateFkField(results, fi, parentIds);
+                fullyHydrateFkField(results, fi);
 
             } else if (fi.isOneToMany && fi.relatedType != null) {
                 loadOneToMany(results, fi, parentIds, inClause);
@@ -138,24 +156,21 @@ public class SelectQueryImpl<T> extends BaseQuery<T> implements SelectQuery<T> {
         }
     }
 
-    /** Replace stub objects with fully loaded related entities. */
-    private void fullyHydrateFkField(List<T> results, FieldInfo fi, List<Object> parentIds) {
-        // Collect distinct FK ids from the stubs
+    /** Replace id-stub on each entity's FK field with a fully loaded related entity. */
+    private void fullyHydrateFkField(List<?> entities, FieldInfo fi) {
         Set<Object> fkIds = new HashSet<>();
-        for (T r : results) {
+        FieldInfo relId = EntityMapper.getIdField(fi.relatedType);
+        for (Object e : entities) {
             try {
-                Object stub = fi.field.get(r);
-                if (stub != null) {
-                    FieldInfo relId = EntityMapper.getIdField(fi.relatedType);
-                    fkIds.add(relId.field.get(stub));
-                }
-            } catch (Exception e) { throw new RuntimeException(e); }
+                Object stub = fi.field.get(e);
+                if (stub != null) fkIds.add(relId.field.get(stub));
+            } catch (Exception ex) { throw new RuntimeException(ex); }
         }
         if (fkIds.isEmpty()) return;
 
         String inClause = fkIds.stream().map(x -> "?").collect(Collectors.joining(", "));
         String sql = "SELECT * FROM " + EntityMapper.tableName(fi.relatedType)
-                + " WHERE " + EntityMapper.getIdField(fi.relatedType).columnName + " IN (" + inClause + ")";
+                + " WHERE " + relId.columnName + " IN (" + inClause + ")";
 
         Map<Object, Object> byId = new HashMap<>();
         Connection conn = null;
@@ -167,26 +182,24 @@ public class SelectQueryImpl<T> extends BaseQuery<T> implements SelectQuery<T> {
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         Object rel = hydrateGeneric(rs, fi.relatedType);
-                        FieldInfo relId = EntityMapper.getIdField(fi.relatedType);
                         byId.put(relId.field.get(rel), rel);
                     }
                 }
             }
-        } catch (Exception e) {
-            throw new RuntimeException("JOIN hydration failed", e);
+        } catch (Exception ex) {
+            throw new RuntimeException("JOIN hydration failed", ex);
         } finally {
             if (conn != null) pool.release(conn);
         }
 
-        for (T r : results) {
+        for (Object e : entities) {
             try {
-                Object stub = fi.field.get(r);
+                Object stub = fi.field.get(e);
                 if (stub != null) {
-                    FieldInfo relId = EntityMapper.getIdField(fi.relatedType);
                     Object full = byId.get(relId.field.get(stub));
-                    if (full != null) fi.field.set(r, full);
+                    if (full != null) fi.field.set(e, full);
                 }
-            } catch (Exception e) { throw new RuntimeException(e); }
+            } catch (Exception ex) { throw new RuntimeException(ex); }
         }
     }
 
@@ -225,6 +238,20 @@ public class SelectQueryImpl<T> extends BaseQuery<T> implements SelectQuery<T> {
                 List<Object> children = byParentId.getOrDefault(parentId, Collections.emptyList());
                 fi.field.set(r, children);
             } catch (Exception e) { throw new RuntimeException(e); }
+        }
+
+        // Deep hydrate FKs on the children whose target is also in the joins list
+        // (Artist - ArtistEpoch - Epoch, or Artwork -> Rating -> User/Stars).
+        List<Object> allChildren = byParentId.values().stream()
+                .flatMap(Collection::stream).collect(Collectors.toList());
+        if (!allChildren.isEmpty()) {
+            for (FieldInfo childFi : EntityMapper.getFields(fi.relatedType)) {
+                if (childFi.isForeignKey
+                        && childFi.relatedType != null
+                        && joins.contains(childFi.relatedType)) {
+                    fullyHydrateFkField(allChildren, childFi);
+                }
+            }
         }
     }
 
@@ -281,7 +308,7 @@ public class SelectQueryImpl<T> extends BaseQuery<T> implements SelectQuery<T> {
         for (FieldInfo fi : EntityMapper.getFields(cls)) {
             if (fi.columnName == null || fi.isOneToMany || fi.isManyToMany) continue;
             if (fi.isForeignKey) {
-                // Mirror hydrate(): place an id-only stub on FK fields so nested entities load cleanly.
+                // stub for FK
                 Object fkId = rs.getObject(fi.columnName);
                 if (fkId != null) {
                     Object stub = instantiate(fi.relatedType);
