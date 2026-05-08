@@ -3,9 +3,11 @@ package Autumn.templating;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Minimal template engine:
@@ -46,13 +49,90 @@ public final class Templater {
         while (matcher.find()) {
             String key = matcher.group(1);
             Object value = resolveValue(data, key);
-            // Unknown keys render to empty text for now
-            String replacement = value == null ? "" : String.valueOf(value);
+            String replacement = formatValue(value);
             matcher.appendReplacement(rendered, Matcher.quoteReplacement(replacement));
         }
 
         matcher.appendTail(rendered);
         return rendered.toString();
+    }
+
+    // String for {{ x }}: primitives, lists comma-joined; objects use displayedAs/name if exist.
+    public static String formatValue(Object value) {
+        if (value == null) return "";
+        if (isSimple(value)) return value.toString();
+        if (value instanceof Collection<?> c) {
+            if (c.isEmpty()) return "";
+            return c.stream().map(Templater::formatValue)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.joining(", "));
+        }
+        String main = entityLabel(value);
+        List<String> linked = entityLinkedLabels(value);
+        if (main != null) {
+            return linked.isEmpty() ? main : main + " (" + String.join(", ", linked) + ")";
+        }
+        if (!linked.isEmpty()) return String.join(", ", linked);
+        return value.toString();
+    }
+
+    private static boolean isSimple(Object o) {
+        return o instanceof CharSequence || o instanceof Number || o instanceof Boolean
+                || o instanceof Character || o instanceof Enum<?>;
+    }
+
+    // Prefer displayedAs, else name appear in keys or reflective fields.
+    private static String entityLabel(Object value) {
+        for (String candidate : new String[]{"displayedAs", "name"}) {
+            Object v = readMember(value, candidate);
+            if (v != null && !v.toString().isBlank()) return v.toString();
+        }
+        return null;
+    }
+
+    // Other fields that look like linked rows (nested objects with a displayedAs/name).
+    private static List<String> entityLinkedLabels(Object value) {
+        List<String> labels = new ArrayList<>();
+        for (Map.Entry<String, Object> e : membersOf(value)) {
+            Object v = e.getValue();
+            if (v == null || isSimple(v) || v instanceof Collection<?>) continue;
+            String lbl = entityLabel(v);
+            if (lbl != null) labels.add(lbl);
+        }
+        return labels;
+    }
+
+    private static Object readMember(Object value, String key) {
+        if (value instanceof Map<?, ?> m) return m.get(key);
+        try {
+            Field f = value.getClass().getDeclaredField(key);
+            f.setAccessible(true);
+            return f.get(value);
+        } catch (NoSuchFieldException ignored) {
+            return null;
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static List<Map.Entry<String, Object>> membersOf(Object value) {
+        List<Map.Entry<String, Object>> out = new ArrayList<>();
+        if (value instanceof Map<?, ?> m) {
+            for (Map.Entry<?, ?> e : m.entrySet()) {
+                if (e.getKey() instanceof String k) {
+                    out.add(new AbstractMap.SimpleEntry<>(k, e.getValue()));
+                }
+            }
+            return out;
+        }
+        for (Field f : value.getClass().getDeclaredFields()) {
+            if (Modifier.isStatic(f.getModifiers()) || f.isSynthetic()) continue;
+            f.setAccessible(true);
+            try {
+                out.add(new AbstractMap.SimpleEntry<>(f.getName(), f.get(value)));
+            } catch (IllegalAccessException ignored) {}
+        }
+        return out;
     }
 
     private static String renderIfBlocks(String template, Map<String, ?> context) {
