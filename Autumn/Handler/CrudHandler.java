@@ -151,7 +151,7 @@ public abstract class CrudHandler<T> {
             if (ftype.isAnnotationPresent(Table.class)) {
                 String raw = exchange.formParam(f.getName() + "Id", "");
                 if (raw.isBlank()) continue;
-                f.set(entity, BaseHandler.stubWithId(ftype, Integer.parseInt(raw.trim())));
+                f.set(entity, Db.instance.stub(ftype, Integer.parseInt(raw.trim())));
                 continue;
             }
 

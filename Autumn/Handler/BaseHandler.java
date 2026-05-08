@@ -1,15 +1,10 @@
 package Autumn.handler;
 
 import Autumn.orm.Db;
-import Autumn.orm.Table;
-import Autumn.orm.mapping.EntityMapper;
-import Autumn.orm.mapping.EntityMapper.FieldInfo;
-import Autumn.orm.query.SelectQuery;
 import Autumn.templating.ObjectToMapConverter;
 import Autumn.templating.Templater;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -78,72 +73,61 @@ public final class BaseHandler {
     public static <E> void renderDetail(Exchange exchange, String entityName, Class<E> clazz)
             throws IOException {
         try {
-            String idStr = exchange.queryParam("id", "");
-            if (idStr.isBlank()) {
+            Optional<Integer> idOpt = idParam(exchange);
+            if (idOpt.isEmpty()) {
                 exchange.send(400, "Missing id parameter.");
                 return;
             }
-            int id = Integer.parseInt(idStr);
-            E entity = loadWithJoins(clazz, id);
-            if (entity == null) {
+            int id = idOpt.get();
+            List<E> hits = Db.instance.SELECT.FROM(clazz).JOIN_ALL()
+                    .WHERE("id = ?", id).LIMIT(1).EXEC();
+            if (hits.isEmpty()) {
                 exchange.send(404, entityName + " not found.");
                 return;
             }
-            exchange.html(Templater.render("detail.html", buildDetailContext(entity, entityName, id, clazz)));
+            exchange.html(Templater.render("detail.html",
+                    buildDetailContext(hits.get(0), entityName, id)));
         } catch (Exception e) {
             exchange.send(500, e.getMessage());
         }
     }
 
-    private static <E> E loadWithJoins(Class<E> clazz, int id) {
-        SelectQuery<E> q = Db.instance.SELECT.FROM(clazz).WHERE("id = ?", id).LIMIT(1);
-        for (FieldInfo fi : EntityMapper.getFields(clazz)) {
-            if (fi.isForeignKey && fi.relatedType != null) q = q.JOIN(fi.relatedType);
-        }
-        List<E> results = q.EXEC();
-        return results.isEmpty() ? null : results.get(0);
-    }
+    private static Map<String, Object> buildDetailContext(Object entity, String entityName, int id) {
+        Map<String, Object> entityMap = ObjectToMapConverter.convert(entity);
 
-    private static <E> Map<String, Object> buildDetailContext(E entity, String entityName, int id, Class<E> clazz)
-            throws IllegalAccessException {
+        // pictureUrl and bioUrl are rendered at fixed slots in the template, not in the field table.
         List<Map<String, Object>> fields = new ArrayList<>();
-        String pictureUrl = "";
-        String bioUrl = "";
-        String displayedAs = "Detail";
-
-        for (Field f : clazz.getDeclaredFields()) {
-            f.setAccessible(true);
-            String name = f.getName();
-            Object val = f.get(entity);
-
-            switch (name) {
-                case "pictureUrl":
-                    if (val != null && !val.toString().isBlank()) pictureUrl = val.toString();
-                    break;
-                case "bioUrl":
-                    if (val != null && !val.toString().isBlank()) bioUrl = val.toString();
-                    break;
-                case "displayedAs":
-                    if (val != null) displayedAs = val.toString();
-                    fields.add(Map.of("key", name, "value", labelFor(val)));
-                    break;
-                default:
-                    fields.add(Map.of("key", name, "value", labelFor(val)));
-            }
+        for (Map.Entry<String, Object> e : entityMap.entrySet()) {
+            String key = e.getKey();
+            if (key.equals("pictureUrl") || key.equals("bioUrl")) continue;
+            fields.add(field(key, e.getValue()));
         }
 
         Map<String, Object> ctx = new HashMap<>();
         ctx.put("entityName", entityName);
         ctx.put("id", id);
-        ctx.put("displayedAs", displayedAs);
-        ctx.put("pictureUrl", pictureUrl);
-        ctx.put("bioUrl", bioUrl);
+        ctx.put("displayedAs", str(entityMap.get("displayedAs"), "Detail"));
+        ctx.put("pictureUrl", str(entityMap.get("pictureUrl"), ""));
+        ctx.put("bioUrl", str(entityMap.get("bioUrl"), ""));
         ctx.put("showArtworkEdit", entityName.equalsIgnoreCase("Artwork"));
         ctx.put("artworkEditUrl", "/artworks/edit?id=" + id);
         ctx.put("fields", fields);
         return ctx;
     }
 
+    /** {@code Map.of} can't hold null values, so wrap with a tolerant builder. */
+    private static Map<String, Object> field(String key, Object value) {
+        Map<String, Object> row = new HashMap<>(2);
+        row.put("key", key);
+        row.put("value", value);
+        return row;
+    }
+
+    private static String str(Object v, String fallback) {
+        return v == null || v.toString().isBlank() ? fallback : v.toString();
+    }
+
+    /** Parses a form value into the given target type. */
     public static Object coerce(String raw, Class<?> type) {
         String value = raw.trim();
         if (type == String.class)                          return value;
@@ -152,35 +136,5 @@ public final class BaseHandler {
         if (type == double.class  || type == Double.class)  return Double.parseDouble(value);
         if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(value);
         return value;
-    }
-
-    /** Builds an entity with only the id field set, used for FK form binding. */
-    public static Object stubWithId(Class<?> relatedType, int id) {
-        try {
-            Object stub = relatedType.getDeclaredConstructor().newInstance();
-            FieldInfo idField = EntityMapper.getIdField(relatedType);
-            idField.field.set(stub, BaseHandler.coerce(Integer.toString(id), idField.field.getType()));
-            return stub;
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException("Failed to build stub for " + relatedType.getSimpleName(), e);
-        }
-    }
-
-    private static Object labelFor(Object val) {
-        if (val == null) return "-";
-        Class<?> c = val.getClass();
-        if (!c.isAnnotationPresent(Table.class)) return val;
-        for (String candidate : new String[]{"displayedAs", "name"}) {
-            try {
-                Field f = c.getDeclaredField(candidate);
-                f.setAccessible(true);
-                Object label = f.get(val);
-                if (label != null && !label.toString().isBlank()) return label;
-            } catch (NoSuchFieldException ignored) {
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return "(linked)";
     }
 }
