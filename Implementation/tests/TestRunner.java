@@ -11,6 +11,7 @@ import Implementation.repository.Artist;
 import Implementation.repository.ArtistEpoch;
 import Implementation.repository.Artwork;
 import Implementation.repository.Provenance;
+import Implementation.repository.Rating;
 import Implementation.repository.User;
 
 import java.io.IOException;
@@ -52,6 +53,7 @@ public final class TestRunner {
             testOrmInsertUsesPreparedStatement();
             testOrmInsertSetsGeneratedId();
             testOrmWhereObjectRejectsEmptyFilter();
+            testOrmForeignKeyPreventsReferencedDelete();
             testSeedDatabaseCreatesArtDomain();
             testShowUserEmptyDbDoesNotCrash();
             System.out.println("All MVP.tests passed.");
@@ -190,6 +192,20 @@ public final class TestRunner {
         } catch (RuntimeException expected) {
             assert expected.getMessage() != null && expected.getMessage().contains("no values");
         }
+    }
+
+    private static void testOrmForeignKeyPreventsReferencedDelete() {
+        SeedDatabase.populateIfEmpty();
+        Rating rating = Db.instance.SELECT.FROM(Rating.class).LIMIT(1).EXEC().getFirst();
+        int artworkId = rating.artwork.id;
+        boolean prevented = false;
+        try {
+            Db.instance.DELETE.FROM(Artwork.class).WHERE("id = ?", artworkId).EXEC();
+        } catch (RuntimeException expected) {
+            prevented = true;
+        }
+        assert prevented : "foreign key needs to prevent deleting a referenced artwork";
+        assert Db.instance.SELECT.FROM(Artwork.class).WHERE("id = ?", artworkId).EXEC().size() == 1;
     }
 
     private static void testSeedDatabaseCreatesArtDomain() {

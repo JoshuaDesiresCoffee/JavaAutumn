@@ -119,6 +119,13 @@ public class SchemaSync {
         if (fi.isId) return dialect.primaryKeyDef(fi.columnName);
         String type = fi.isForeignKey ? "INTEGER" : dialect.sqlType(fi.field.getType());
         StringBuilder col = new StringBuilder(fi.columnName).append(" ").append(type);
+        if (fi.isForeignKey) {
+            col.append(" REFERENCES ")
+                    .append(EntityMapper.tableName(fi.relatedType))
+                    .append("(")
+                    .append(EntityMapper.getIdField(fi.relatedType).columnName)
+                    .append(")");
+        }
         if (fi.field.isAnnotationPresent(Column.class)) {
             Column ann = fi.field.getAnnotation(Column.class);
             if (!ann.nullable()) col.append(" NOT NULL");

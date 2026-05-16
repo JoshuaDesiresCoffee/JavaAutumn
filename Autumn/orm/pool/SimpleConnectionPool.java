@@ -83,7 +83,13 @@ public class SimpleConnectionPool implements ConnectionPool {
     }
 
     private Connection newConnection() throws SQLException {
-        return DriverManager.getConnection(url, user, password);
+        Connection conn = DriverManager.getConnection(url, user, password);
+        if (url.startsWith("jdbc:sqlite:")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("PRAGMA foreign_keys = ON");
+            }
+        }
+        return conn;
     }
 
     private boolean isValid(Connection c) {
