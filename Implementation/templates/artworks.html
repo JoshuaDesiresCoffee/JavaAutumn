@@ -9,15 +9,7 @@
     <body>
         <h1>Artworks</h1>
 
-        <div class="buttons">
-            <a class="table-link" href="/">Home</a>
-            <a class="table-link" href="/users">Users</a>
-            <a class="table-link active" href="/artworks">Artworks</a>
-            <a class="table-link" href="/ratings">Ratings</a>
-            <a class="table-link" href="/stars">Stars</a>
-            <a class="table-link" href="/roles">Roles</a>
-            <a class="table-link" href="/api/artwork/all">Artworks API</a>
-        </div>
+        <div class="buttons" style="display:none;"></div>
 
         <div class="table-container">
             <table>
@@ -28,19 +20,19 @@
                         <th>Material</th>
                         <th>Artist</th>
                         <th>Provenance</th>
-                        <th>Actions</th>
-                        <th>Rate</th>
+                        <th data-min-role="AUTH">Actions</th>
+                        <th data-min-role="AUTH">Rate</th>
                     </tr>
                 </thead>
                 <tbody>
                     {{#each artworks}}
                         <tr>
                             <td>{{ id }}</td>
-                            <td>{{ displayedAs }}</td>
-                            <td>{{ material }}</td>
-                            <td>{{ artist.displayedAs }}</td>
-                            <td>{{ provenance.displayedAs }}</td>
-                            <td>
+                            <td class="truncate-cell" title="{{ displayedAs }}">{{ displayedAs }}</td>
+                            <td class="truncate-cell" title="{{ material }}">{{ material }}</td>
+                            <td class="truncate-cell" title="{{ artist.displayedAs }}">{{ artist.displayedAs }}</td>
+                            <td class="truncate-cell" title="{{ provenance.displayedAs }}">{{ provenance.displayedAs }}</td>
+                            <td data-min-role="AUTH">
                                 <form method="GET" action="/artworks/edit" style="display:inline;">
                                     <input type="hidden" name="id" value="{{ id }}">
                                     <button type="submit" style="background: var(--accent-gold); color: #1e1611;">Edit</button>
@@ -50,7 +42,7 @@
                                     <button type="submit" class="btn-danger">Delete</button>
                                 </form>
                             </td>
-                            <td>
+                            <td data-min-role="AUTH">
                                 <form method="POST" action="/ratings/create" style="display:inline;">
                                     <input type="hidden" name="artworkId" value="{{ id }}">
                                     <select name="userId" required>
@@ -74,7 +66,7 @@
             </table>
         </div>
 
-        <div class="form-container">
+        <div class="form-container" data-min-role="AUTH">
             <h2>Add New Artwork</h2>
             <form method="POST" action="/artworks/create">
                 <input type="text" name="displayedAs" placeholder="Artwork Title" required>

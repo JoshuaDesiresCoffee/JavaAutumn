@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Provenances — JavaAutumn</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/script.js" defer></script>
+    </head>
+    <body>
+        <h1>Provenances</h1>
+
+        <div class="buttons" style="display:none;"></div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Museum / Gallery Name</th>
+                        <th data-min-role="AUTH">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each provenances}}
+                        <tr>
+                            <td>{{ id }}</td>
+                            <td class="truncate-cell" title="{{ displayedAs }}">{{ displayedAs }}</td>
+                            <td data-min-role="AUTH">
+                                <form method="GET" action="/provenances/edit" style="display:inline;">
+                                    <input type="hidden" name="id" value="{{ id }}">
+                                    <button type="submit" style="background: var(--accent-gold); color: #1e1611;">Edit</button>
+                                </form>
+                                <form method="POST" action="/provenances/delete" style="display:inline;">
+                                    <input type="hidden" name="id" value="{{ id }}">
+                                    <button type="submit" class="btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="form-container" data-min-role="AUTH">
+            <h2>Add New Provenance</h2>
+            <form method="POST" action="/provenances/create">
+                <input type="text" name="displayedAs" placeholder="Museum / Gallery Name" required>
+                <button type="submit">Create Provenance</button>
+            </form>
+        </div>
+    </body>
+</html>

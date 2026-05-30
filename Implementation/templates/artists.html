@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Artists — JavaAutumn</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/script.js" defer></script>
+    </head>
+    <body>
+        <h1>Artists</h1>
+
+        <div class="buttons" style="display:none;"></div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Full Name</th>
+                        <th>Birth Date</th>
+                        <th>Death Date</th>
+                        <th data-min-role="AUTH">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each artists}}
+                        <tr>
+                            <td>{{ id }}</td>
+                            <td class="truncate-cell" title="{{ displayedAs }}">{{ displayedAs }}</td>
+                            <td class="truncate-cell" title="{{ fullName }}">{{ fullName }}</td>
+                            <td>{{ birthDate }}</td>
+                            <td>{{ deathDate }}</td>
+                            <td data-min-role="AUTH">
+                                <form method="GET" action="/artists/edit" style="display:inline;">
+                                    <input type="hidden" name="id" value="{{ id }}">
+                                    <button type="submit" style="background: var(--accent-gold); color: #1e1611;">Edit</button>
+                                </form>
+                                <form method="POST" action="/artists/delete" style="display:inline;">
+                                    <input type="hidden" name="id" value="{{ id }}">
+                                    <button type="submit" class="btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="form-container" data-min-role="AUTH">
+            <h2>Add New Artist</h2>
+            <form method="POST" action="/artists/create">
+                <input type="text" name="displayedAs" placeholder="Short Name (e.g. da Vinci)" required>
+                <input type="text" name="fullName" placeholder="Full Name">
+                <input type="text" name="birthDate" placeholder="Birth Date (e.g. 15.04.1452)">
+                <input type="text" name="deathDate" placeholder="Death Date (e.g. 02.05.1519)">
+                <input type="text" name="bioUrl" placeholder="Wikipedia / Bio URL">
+                <input type="text" name="pictureUrl" placeholder="Picture URL">
+                <button type="submit">Create Artist</button>
+            </form>
+        </div>
+    </body>
+</html>

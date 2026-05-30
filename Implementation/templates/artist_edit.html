@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Artist — JavaAutumn</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/script.js" defer></script>
+</head>
+<body>
+    <h1>Edit Artist: {{ artist.displayedAs }}</h1>
+
+    <div class="buttons">
+        <a class="table-link" href="/artist?id={{ artist.id }}">Back to Detail</a>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" action="/artists/update">
+            <input type="hidden" name="id" value="{{ artist.id }}">
+
+            <label>Short Name (displayedAs)</label>
+            <input type="text" name="displayedAs" value="{{ artist.displayedAs }}" required style="width:100%;margin-bottom:12px;">
+
+            <label>Full Name</label>
+            <input type="text" name="fullName" value="{{ artist.fullName }}" style="width:100%;margin-bottom:12px;">
+
+            <label>Birth Date (e.g. 01.03.1445)</label>
+            <input type="text" name="birthDate" value="{{ artist.birthDate }}" style="width:100%;margin-bottom:12px;">
+
+            <label>Death Date</label>
+            <input type="text" name="deathDate" value="{{ artist.deathDate }}" style="width:100%;margin-bottom:12px;">
+
+            <label>Wikipedia / Bio URL</label>
+            <input type="text" name="bioUrl" value="{{ artist.bioUrl }}" placeholder="https://..." style="width:100%;margin-bottom:12px;">
+
+            <label>Picture URL <small style="color:var(--text-muted);font-weight:normal;">(direct image link — right-click image on Wikipedia → "Open image in new tab")</small></label>
+            <input type="text" name="pictureUrl" value="{{ artist.pictureUrl }}" placeholder="https://upload.wikimedia.org/wikipedia/commons/..." style="width:100%;margin-bottom:4px;">
+            {{#if artist.pictureUrl}}
+            <img src="{{ artist.pictureUrl }}" alt="preview" style="max-width:120px;max-height:120px;border-radius:8px;margin-bottom:12px;border:1px solid var(--border-color);" referrerpolicy="no-referrer" onerror="this.style.display='none'">
+            {{/if}}
+
+            <button type="submit" style="width:100%;">Save Changes</button>
+        </form>
+    </div>
+</body>
+</html>

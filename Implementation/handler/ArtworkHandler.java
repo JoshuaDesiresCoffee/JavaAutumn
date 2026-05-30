@@ -73,4 +73,17 @@ public class ArtworkHandler extends CrudHandler<Artwork> {
             exchange.send(500, e.getMessage());
         }
     }
+
+    // used by sidebar inline form - sends 200 instead of redirect so fetch() works
+    public void createFromSidebar(Exchange exchange) throws IOException {
+        try {
+            Artwork entity = bindFromForm(exchange, false);
+            String error = validate(entity);
+            if (error != null) { exchange.send(400, error); return; }
+            Db.instance.INSERT.INTO(Artwork.class).VALUES(entity).EXEC();
+            exchange.send(200, "OK");
+        } catch (Exception e) {
+            exchange.send(500, "Failed to create Artwork: " + e.getMessage());
+        }
+    }
 }

@@ -47,6 +47,7 @@
             margin-top: 24px;
             display: flex;
             gap: 12px;
+            flex-wrap: wrap;
         }
         .detail-back-btn {
             background: var(--bg-dark);
@@ -65,13 +66,24 @@
             background: var(--accent-orange);
             color: white;
             border-color: transparent;
+            text-decoration: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: inline-block;
         }
-        .detail-edit-link:hover {
-            color: white;
+        .detail-edit-link:hover { color: white; opacity: 0.85; }
+        .detail-delete-btn {
+            background: rgba(180,40,40,0.8);
+            border: 1px solid rgba(220,60,60,0.5);
+            color: #fff;
+            cursor: pointer;
         }
+        .detail-delete-btn:hover { background: rgba(200,40,40,1); }
     </style>
 </head>
-<body>
+<body data-entity-type="{{ entityName }}" data-entity-id="{{ entityId }}">
     <div class="table-container">
         <h1>{{ entityName }}: <span class="detail-title-name">{{ displayedAs }}</span></h1>
 
@@ -102,8 +114,14 @@
 
                 <div class="action-bar">
                     <button type="button" class="detail-back-btn" onclick="window.history.back()">← Go Back</button>
-                    {{#if showArtworkEdit}}
-                    <a href="{{ artworkEditUrl }}" class="table-link detail-edit-link">✏️ Edit</a>
+
+                    {{#if canEdit}}
+                    <a href="{{ editUrl }}" class="detail-edit-link" id="detailEditBtn">✏️ Edit</a>
+                    <form method="POST" action="{{ deleteUrl }}" id="detailDeleteForm" style="display:inline;">
+                        <input type="hidden" name="id" value="{{ entityId }}">
+                        <button type="submit" class="detail-delete-btn" id="detailDeleteBtn"
+                                onclick="return confirm('Delete this {{ entityName }}?')">🗑 Delete</button>
+                    </form>
                     {{/if}}
                 </div>
             </div>

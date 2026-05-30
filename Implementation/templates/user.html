@@ -9,15 +9,7 @@
     <body>
         <h1>Users</h1>
 
-        <div class="buttons">
-            <a class="table-link" href="/">Home</a>
-            <a class="table-link active" href="/users">Users</a>
-            <a class="table-link" href="/artworks">Artworks</a>
-            <a class="table-link" href="/ratings">Ratings</a>
-            <a class="table-link" href="/stars">Stars</a>
-            <a class="table-link" href="/roles">Roles</a>
-            <a class="table-link" href="/api/user/all">Users API</a>
-        </div>
+        <div class="buttons" style="display:none;"></div>
 
         <div class="table-container">
             <table>
@@ -26,7 +18,7 @@
                         <th>ID</th>
                         <th>Name</th>
                         <th>Email</th>
-                        <th>Actions</th>
+                        <th data-min-role="AUTH">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -35,7 +27,7 @@
                             <td>{{ id }}</td>
                             <td>{{ name }}</td>
                             <td>{{ email }}</td>
-                            <td>
+                            <td data-min-role="AUTH">
                                 <div class="row-form">
                                     <form class="inline-form" method="post" action="/api/user_update">
                                         <input type="hidden" name="id" value="{{ id }}">
@@ -43,7 +35,7 @@
                                         <input name="email" value="{{ email }}" placeholder="Email">
                                         <button type="submit">Update</button>
                                     </form>
-                                    <form class="delete-form" method="post" action="/api/user_delete">
+                                    <form class="delete-form" method="post" action="/api/user_delete" data-min-role="ADMIN">
                                         <input type="hidden" name="id" value="{{ id }}">
                                         <button type="submit">Delete</button>
                                     </form>
@@ -55,7 +47,7 @@
             </table>
         </div>
 
-        <div class="create-panel">
+        <div class="create-panel" data-min-role="ADMIN">
             <h2>Create User</h2>
             <form class="inline-form" method="post" action="/api/user_create">
                 <label>Name</label>

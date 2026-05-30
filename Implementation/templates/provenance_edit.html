@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Provenance — JavaAutumn</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/script.js" defer></script>
+</head>
+<body>
+    <h1>Edit Provenance: {{ provenance.displayedAs }}</h1>
+
+    <div class="buttons">
+        <a class="table-link" href="/provenance?id={{ provenance.id }}">Back to Detail</a>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" action="/provenances/update">
+            <input type="hidden" name="id" value="{{ provenance.id }}">
+
+            <label>Museum / Gallery Name</label>
+            <input type="text" name="displayedAs" value="{{ provenance.displayedAs }}" required style="width:100%;margin-bottom:12px;">
+
+            <button type="submit" style="width:100%;">Save Changes</button>
+        </form>
+    </div>
+</body>
+</html>

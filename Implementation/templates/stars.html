@@ -10,14 +10,7 @@
 <body>
     <h1>Stars</h1>
 
-    <div class="buttons">
-        <a class="table-link" href="/">Home</a>
-        <a class="table-link" href="/users">Users</a>
-        <a class="table-link" href="/artworks">Artworks</a>
-        <a class="table-link" href="/ratings">Ratings</a>
-        <a class="table-link active" href="/stars">Stars</a>
-        <a class="table-link" href="/roles">Roles</a>
-    </div>
+    <div class="buttons" style="display:none;"></div>
 
     <div class="table-container">
         <table>
@@ -27,7 +20,7 @@
                     <th>Stars</th>
                     <th>Value</th>
                     <th>Linked Ratings</th>
-                    <th>Actions</th>
+                    <th data-min-role="AUTH">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -37,7 +30,7 @@
                     <td style="font-size:1.3rem; letter-spacing:2px;">{{ displayedAs }}</td>
                     <td>{{ value }}</td>
                     <td>{{ ratingCount }}</td>
-                    <td>
+                    <td data-min-role="AUTH">
                         <form method="POST" action="/stars/delete" style="display:inline;">
                             <input type="hidden" name="id" value="{{ id }}">
                             <button type="submit" class="btn-danger">Delete</button>
@@ -49,7 +42,7 @@
         </table>
     </div>
 
-    <div class="form-container">
+    <div class="form-container" data-min-role="AUTH">
         <h2>Create New Stars Level</h2>
         <form method="POST" action="/stars/create">
             <select name="value" required>

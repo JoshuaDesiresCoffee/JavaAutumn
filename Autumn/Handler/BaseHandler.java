@@ -103,17 +103,40 @@ public final class BaseHandler {
             fields.add(field(key, e.getValue()));
         }
 
+        // determine edit/delete URLs per entity type
+        String editUrl   = "";
+        String deleteUrl = "";
+        boolean canEdit  = false;
+        String lname = entityName.toLowerCase();
+        if (lname.equals("artist")) {
+            editUrl   = "/artists/edit?id=" + id;
+            deleteUrl = "/artists/delete";
+            canEdit   = true;
+        } else if (lname.equals("artwork")) {
+            editUrl   = "/artworks/edit?id=" + id;
+            deleteUrl = "/artworks/delete";
+            canEdit   = true;
+        } else if (lname.equals("provenance")) {
+            editUrl   = "/provenances/edit?id=" + id;
+            deleteUrl = "/provenances/delete";
+            canEdit   = true;
+        }
+
         Map<String, Object> ctx = new HashMap<>();
-        ctx.put("entityName", entityName);
-        ctx.put("id", id);
-        ctx.put("displayedAs", str(entityMap.get("displayedAs"), "Detail"));
-        ctx.put("pictureUrl", str(entityMap.get("pictureUrl"), ""));
-        ctx.put("bioUrl", str(entityMap.get("bioUrl"), ""));
+        ctx.put("entityName",    entityName);
+        ctx.put("entityId",      id);
+        ctx.put("displayedAs",   str(entityMap.get("displayedAs"), "Detail"));
+        ctx.put("pictureUrl",    str(entityMap.get("pictureUrl"), ""));
+        ctx.put("bioUrl",        str(entityMap.get("bioUrl"), ""));
+        ctx.put("editUrl",       editUrl);
+        ctx.put("deleteUrl",     deleteUrl);
+        ctx.put("canEdit",       canEdit);
         ctx.put("showArtworkEdit", entityName.equalsIgnoreCase("Artwork"));
-        ctx.put("artworkEditUrl", "/artworks/edit?id=" + id);
-        ctx.put("fields", fields);
+        ctx.put("artworkEditUrl",  "/artworks/edit?id=" + id);
+        ctx.put("fields",        fields);
         return ctx;
     }
+
 
     /** {@code Map.of} can't hold null values, so wrap with a tolerant builder. */
     private static Map<String, Object> field(String key, Object value) {

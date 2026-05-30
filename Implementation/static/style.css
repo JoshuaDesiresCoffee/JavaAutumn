@@ -297,3 +297,128 @@ button:hover {
     opacity: 0;
     visibility: hidden;
 }
+
+/* role panel styles */
+.role-panel {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 8px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 12px 12px 0 0;
+}
+
+.role-panel-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.role-select-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.role-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.role-guest {
+    background: rgba(160,160,160,0.2);
+    color: #aaa;
+    border: 1px solid #555;
+}
+.role-auth {
+    background: rgba(240,162,2,0.2);
+    color: var(--accent-gold);
+    border: 1px solid var(--accent-gold);
+}
+.role-admin {
+    background: rgba(217,93,57,0.2);
+    color: var(--accent-orange);
+    border: 1px solid var(--accent-orange);
+}
+
+.role-dropdown {
+    flex: 1;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+    outline: none;
+}
+
+.role-hint {
+    margin-top: 6px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* show X more items text */
+.sidebar-more {
+    padding: 4px 16px 6px 24px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+    opacity: 0.7;
+}
+
+/* truncate long text in table cells */
+.truncate-cell {
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* sidebar add button (＋) next to section title */
+.sidebar-add-btn {
+    background: none;
+    border: 1px solid var(--accent-gold);
+    color: var(--accent-gold);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.sidebar-add-btn:hover {
+    background: rgba(240,162,2,0.15);
+    transform: none;
+    box-shadow: none;
+}
+
+/* inline add form inside sidebar section */
+.sidebar-inline-form {
+    padding: 10px 12px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.sidebar-inline-form input,
+.sidebar-inline-form select {
+    padding: 6px 8px;
+    font-size: 0.82rem;
+}
+.sidebar-inline-submit {
+    margin-top: 4px;
+    padding: 7px 12px;
+    font-size: 0.85rem;
+    width: 100%;
+}
+
+
+
