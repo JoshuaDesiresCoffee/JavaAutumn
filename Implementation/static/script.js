@@ -133,7 +133,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 { title: 'Provenance', items: data.provenances|| [], linkBase: '/provenance?id=', addable: true,  createUrl: '/provenances/create-sidebar'       },
                 { title: 'Epoch',      items: data.epochs     || [], linkBase: '/epoch?id='     },
                 { title: 'User',       items: data.users      || [], linkBase: '/user?id=', labelKey: 'name' },
-                { title: 'Rating',     items: data.ratings    || [], linkBase: '/rating?id='    },
+                { title: 'Rating',     items: data.ratings    || [], linkBase: '/rating?id=', listUrl: '/ratings' },
                 { title: 'Stars',      items: data.stars      || [], linkBase: '/stars?id='     },
                 { title: 'Role',       items: data.roles      || [], linkBase: '/role?id='      },
             ];
@@ -169,7 +169,7 @@ document.addEventListener("DOMContentLoaded", function() {
             var accordionSections = [];
 
             sections.forEach(function(sec) {
-                if (sec.items.length === 0 && !sec.addable) return;
+                if (sec.items.length === 0 && !sec.addable && !sec.listUrl) return;
 
                 var sectionDiv = document.createElement('div');
                 sectionDiv.className = 'sidebar-section';
@@ -239,6 +239,14 @@ document.addEventListener("DOMContentLoaded", function() {
                         });
                     });
                     titleEl.appendChild(addBtn);
+                }
+
+                if (sec.listUrl) {
+                    var listLink = document.createElement('a');
+                    listLink.className = 'sidebar-item';
+                    listLink.href = sec.listUrl;
+                    listLink.textContent = 'View all ' + sec.listUrl.split('/').pop() + ' →';
+                    itemsContainer.appendChild(listLink);
                 }
 
                 var visible = sec.items.slice(0, MAX_ITEMS);
