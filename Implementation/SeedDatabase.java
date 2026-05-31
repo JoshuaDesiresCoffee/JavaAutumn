@@ -136,13 +136,13 @@ public final class SeedDatabase {
                 "Sandro di Mariano di Vanni Filipepi, gen. Botticelli",
                 "01.03.1445", "17.05.1510",
                 "https://de.wikipedia.org/wiki/Sandro_Botticelli",
-                "https://www.van-ham.com/fileadmin/Ads/Sandro_Botti.jpg");
+                "");
 
         Artist leonardo = artist("Leonardo",
                 "Leonardo di ser Piero da Vinci",
                 "15.04.1452", "02.05.1519",
                 "https://de.wikipedia.org/wiki/Leonardo_da_Vinci",
-                "https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Leonardo_self.jpg/402px-Leonardo_self.jpg");
+                "");
 
         Artist velazquez = artist("Velázquez",
                 "Diego Rodríguez de Silva y Velázquez",
@@ -172,20 +172,28 @@ public final class SeedDatabase {
 
         // ── Artworks ──────────────────────────────────────────────────────
         Artwork birthOfVenus = artwork("Birth of Venus", "Tempera on canvas",
-                "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Sandro_Botticelli_046.jpg/800px-Sandro_Botticelli_046.jpg",
-                botticelli, louvre);
-        Artwork monaLisa = artwork("Mona Lisa", "Oil on poplar wood",
-                "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
-                leonardo, louvre);
-        artwork("Primavera", "Oil on Canvas",
-                "https://etsy.com/...primavera", botticelli, albertina);
-        artwork("Las Meninas", "Oil on canvas",
-                "", velazquez, landesmus);
-        artwork("The Night's Watch", "Oil on canvas",
-                "", rembrandt, landesmus);
-        artwork("Mary Magdalene", "Oil on canvas",
-                "", caravaggio, musee);
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg",
+        botticelli, louvre);
 
+        Artwork monaLisa = artwork("Mona Lisa", "Oil on poplar wood",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
+        leonardo, louvre);
+
+        artwork("Primavera", "Tempera on panel",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Botticelli-primavera.jpg",
+        botticelli, albertina);
+
+         artwork("Las Meninas", "Oil on canvas",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Las_Meninas_01.jpg",
+        velazquez, landesmus);
+
+        artwork("The Night Watch", "Oil on canvas",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/The_Nightwatch_by_Rembrandt_-_Rijksmuseum.jpg",
+        rembrandt, landesmus);
+
+        artwork("Mary Magdalene", "Oil on canvas",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Maria_Magdalene_by_Caravaggio.jpg",
+        caravaggio, musee);
         // ── Ratings ───────────────────────────────────────────────────────
         rating("first rating",  birthOfVenus, starsArr[4], udo);
         rating("second rating", monaLisa,     starsArr[3], freddy);
